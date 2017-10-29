@@ -14,4 +14,8 @@ Install dependencies:
 
   `pip install -r requirements.txt`
 
+<<<<<<< HEAD
 Add API-Key to `manifesto_data.py` ([see Manifesto Project Website](https://manifestoproject.wzb.eu/information/documents/api)). 
+=======
+Add API-Key to `manifesto_data.py` ([see](https://manifestoproject.wzb.eu/information/documents/api)). 
+>>>>>>> eb1f2edbf7179349db8b3e191698df70379e8835
