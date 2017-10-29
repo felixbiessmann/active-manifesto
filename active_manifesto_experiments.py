@@ -218,4 +218,4 @@ def plot_results(fn):
     pylab.title("Classifier score as function of n_samples")
     pylab.xlabel("% samples to label")
     pylab.ylabel("Accuracy")
-    pylab.savefig('active_learning_manifesto.pdf')
+    pylab.savefig('manuscript/images/active_learning_manifesto.pdf')
