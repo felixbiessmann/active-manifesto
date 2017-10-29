@@ -62,7 +62,7 @@ def load_data(folder = "data/manifesto",
             df.cmp_code.replace(label, rep, inplace = True)
 
     label_hist = df.cmp_code.value_counts()
-    valid_labels = label_hist[label_hist > 1000].index
+    valid_labels = label_hist[label_hist > min_label_count].index
     df = df[df.cmp_code.isin(valid_labels)]
     vect = HashingVectorizer()
     return vect.transform(df.content.values), df.cmp_code.apply(int).as_matrix()
