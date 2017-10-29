@@ -12,6 +12,11 @@ from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score
 from sklearn.model_selection import train_test_split
 from scipy.special import logit
 
+label2rightleft = {
+    'right': [104,201,203,305,401,402,407,414,505,601,603,605,606],
+    'left': [103,105,106,107,403,404,406,412,413,504,506,701,202]
+    }
+
 def report(results, n_top=3):
     for i in range(1, n_top + 1):
         candidates = np.flatnonzero(results['rank_test_score'] == i)
@@ -39,8 +44,23 @@ def model_selection(X,y):
         report(gs_clf.cv_results_)
     return gs_clf.best_estimator_
 
-def load_data(folder = "data/manifesto", min_label_count = 1000):
+def load_data(folder = "data/manifesto",
+        min_label_count = 1000,
+        left_right = False):
     df = pd.concat([pd.read_csv(fn) for fn in glob.glob(os.path.join(folder,"*.csv"))]).dropna(subset=['cmp_code','content'])
+
+    if left_right:
+        # replace_with = ['left', 'right', 'neutral']
+        replace_with = [-1, 1, 0]
+        label_to_replace = [
+            label2rightleft['left'],
+            label2rightleft['right'],
+            list(set(df.cmp_code.unique()) - set(label2rightleft['left'] + label2rightleft['right']))
+            ]
+
+        for rep, label in zip(replace_with, label_to_replace):
+            df.cmp_code.replace(label, rep, inplace = True)
+
     label_hist = df.cmp_code.value_counts()
     valid_labels = label_hist[label_hist > 1000].index
     df = df[df.cmp_code.isin(valid_labels)]
@@ -104,64 +124,18 @@ def prioritize_samples(label_probas):
     # dists = abs(logit(label_probas)).mean(axis=1)
     # priorities = dists.argsort()
 
-    entropy = -(label_probas * np.log(label_probas)).sum(axis=1)
-    priorities = entropy.argsort()[::-1]
+    # entropy = -(label_probas * np.log(label_probas)).sum(axis=1)
+    # priorities = entropy.argsort()[::-1]
 
-    # uncertainty_sampling = 1 - label_probas.max(axis=1)
-    # priorities = uncertainty_sampling.argsort()[::-1]
+    uncertainty_sampling = 1 - label_probas.max(axis=1)
+    priorities = uncertainty_sampling.argsort()[::-1]
     return priorities
-
-def run_experiment_binary(
-        baseline_train_percentage=0.01,
-        validation_percentage = 0.8,
-        n_reps=2,
-        percentage_samples=[1,5,10,20,30,40,50,75,100]):
-    '''
-    Runs a multilabel classification experiment
-    '''
-    print("Loading data")
-    X_all, y_all = load_data()
-    print("Training baseline on {}% (n={})".format(baseline_train_percentage, int(len(y_all) * baseline_train_percentage)))
-    print("Validation set size {}% (n={})".format(validation_percentage, int(len(y_all) * validation_percentage)))
-    label_pool_percentage = 1-(baseline_train_percentage+validation_percentage)
-    print("Label pool {}% (n={})".format(label_pool_percentage,int(len(y_all) * label_pool_percentage)))
-    labels = np.unique(y_all)
-    results = {}
-    for label in labels:
-        y = (y_all==label) * 1.0
-        X_train, X_tolabel, y_train, y_tolabel = train_test_split(X_all, y, test_size=1-baseline_train_percentage)
-        X_test, X_validation, y_test, y_validation = train_test_split(X_tolabel, y_tolabel, test_size=validation_percentage / (1-baseline_train_percentage) )
-        print("Model Selection")
-        # do model selection on training data
-        clf = model_selection(X_train, y_train)
-
-        # compute active learning curves
-        active_learning_curves, random_learning_curves, baseline_lows, baseline_highs = [],[],[],[]
-        for irep in range(n_reps):
-            X_train, X_tolabel, y_train, y_tolabel = train_test_split(X_all, y, test_size=1-baseline_train_percentage)
-            X_test, X_validation, y_test, y_validation = train_test_split(X_tolabel, y_tolabel, test_size=validation_percentage / (1-baseline_train_percentage) )
-            active_learning_curve, random_learning_curve, baseline_low, baseline_high = compute_active_learning_curve(X_train, y_train, X_test, y_test, X_validation, y_validation, clf,percentage_samples=percentage_samples)
-            active_learning_curves.append(active_learning_curve)
-            random_learning_curves.append(random_learning_curve)
-            baseline_lows.append(baseline_low)
-            baseline_highs.append(baseline_high)
-
-        results[str(label)] = {
-            'active_learning_curves':active_learning_curves,
-            'random_learning_curves':random_learning_curves,
-            'baseline_lows':baseline_lows,
-            'baseline_highs':baseline_highs,
-            'percentage_samples':percentage_samples
-            }
-
-    json.dump(results,open("active_learning_curves_binary.json","wt"))
-    return results
 
 def run_experiment(
         baseline_train_percentage=0.1,
-        validation_percentage = 0.1,
+        validation_percentage = 0.2,
         n_reps=10,
-        percentage_samples=[1,10,20,30,40,50,100]):
+        percentage_samples=[1,10,20,30,40,50,75,100]):
     '''
     Runs a multilabel classification experiment
     '''
