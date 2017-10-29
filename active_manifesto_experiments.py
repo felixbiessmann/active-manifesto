@@ -31,8 +31,8 @@ def model_selection(X,y):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         # TODO: pipeline parameters (hashing vectorizer dimensionalities etc.) should also be searchable here
-        text_clf = SGDClassifier(loss="log",class_weight="balanced")
-        parameters = {'alpha': (np.logspace(-7,-4,4)).tolist()}
+        text_clf = SGDClassifier(loss="log")
+        parameters = {'alpha': (np.logspace(-6,-4,5)).tolist()}
         # perform gridsearch to get the best regularizer
         gs_clf = GridSearchCV(text_clf, parameters, cv=2, n_jobs=-1,verbose=4)
         gs_clf.fit(X, y)
@@ -57,10 +57,10 @@ def compute_active_learning_curve(X_train,y_train,X_test,y_test,X_validation, y_
     the increase in scores with the respective sampling policy
     '''
     print('Computing active learning curve:')
-    clf = SGDClassifier(loss="log",alpha=clf.alpha,class_weight="balanced").fit(X_train, y_train)
-    baseline_low = f1_score(y_validation, clf.predict(X_validation), average='weighted')
-    clf_trained = SGDClassifier(loss="log",alpha=clf.alpha,class_weight="balanced").fit(vstack([X_train, X_test]), hstack([y_train, y_test]).toarray().flatten())
-    baseline_high = f1_score(y_validation, clf_trained.predict(X_validation), average='weighted')
+    clf = SGDClassifier(loss="log",alpha=clf.alpha).fit(X_train, y_train)
+    baseline_low = accuracy_score(y_validation, clf.predict(X_validation))
+    clf_trained = SGDClassifier(loss="log",alpha=clf.alpha).fit(vstack([X_train, X_test]), hstack([y_train, y_test]).toarray().flatten())
+    baseline_high = accuracy_score(y_validation, clf_trained.predict(X_validation))
     print('\tBaseline on test: {}, baseline score on train and test {}'.format(baseline_low, baseline_high))
 
     # score test data for active learning sorting
@@ -78,7 +78,7 @@ def compute_active_learning_curve(X_train,y_train,X_test,y_test,X_validation, y_
         X_labelled = X_test[random_priorities[:n_samples],:]
         y_labelled = y_test[random_priorities[:n_samples]]
         clf_current = SGDClassifier(loss="log",alpha=clf.alpha).fit(vstack([X_train, X_labelled]), hstack([y_train, y_labelled]).toarray().flatten())
-        current_score = f1_score(y_validation, clf_current.predict(X_validation), average='weighted')
+        current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
         print('\t(RANDOM) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - baseline_low)/(baseline_high-baseline_low))))
         random_learning_curve.append(current_score)
 
@@ -91,7 +91,7 @@ def compute_active_learning_curve(X_train,y_train,X_test,y_test,X_validation, y_
         y_labelled = y_test[priorities[:n_samples]]
 
         clf_current = SGDClassifier(loss="log",alpha=clf.alpha).fit(vstack([X_train, X_labelled]), hstack([y_train, y_labelled]).toarray().flatten())
-        current_score = f1_score(y_validation, clf_current.predict(X_validation), average='weighted')
+        current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
         # label_probas = clf_current.predict_proba(X_validation)
         # priorities = prioritize_samples(label_probas)
         print('\t(ACTIVE LEARNING) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - baseline_low)/(baseline_high-baseline_low))))
@@ -114,8 +114,8 @@ def prioritize_samples(label_probas):
 def run_experiment_binary(
         baseline_train_percentage=0.01,
         validation_percentage = 0.8,
-        n_reps=5,
-        percentage_samples=[1,2,5,10,20,30,50,100]):
+        n_reps=2,
+        percentage_samples=[1,5,10,20,30,40,50,75,100]):
     '''
     Runs a multilabel classification experiment
     '''
@@ -158,10 +158,10 @@ def run_experiment_binary(
     return results
 
 def run_experiment(
-        baseline_train_percentage=0.01,
-        validation_percentage = 0.01,
-        n_reps=5,
-        percentage_samples=[1,2,5,10,20,30,50,100]):
+        baseline_train_percentage=0.1,
+        validation_percentage = 0.1,
+        n_reps=10,
+        percentage_samples=[1,10,20,30,40,50,100]):
     '''
     Runs a multilabel classification experiment
     '''
@@ -182,6 +182,7 @@ def run_experiment(
     # compute active learning curves
     active_learning_curves, random_learning_curves, baseline_lows, baseline_highs = [],[],[],[]
     for irep in range(n_reps):
+        print("Repetition {}/{}".format(irep,n_reps))
         X_train, X_tolabel, y_train, y_tolabel = train_test_split(X_all, y_all, test_size=1-baseline_train_percentage)
         X_test, X_validation, y_test, y_validation = train_test_split(X_tolabel, y_tolabel, test_size=validation_percentage / (1-baseline_train_percentage) )
         active_learning_curve, random_learning_curve, baseline_low, baseline_high = compute_active_learning_curve(X_train, y_train, X_test, y_test, X_validation, y_validation, clf,percentage_samples=percentage_samples)
@@ -209,10 +210,12 @@ def plot_results(fn):
     rc = sp.median(sp.vstack(results['random_learning_curves']), axis=0)
     bl = sp.median(sp.vstack(results['baseline_lows']), axis=0)
     bh = sp.median(sp.vstack(results['baseline_highs']), axis=0)
-    pylab.figure(figsize=(10,10))
+    pylab.figure(figsize=(10,6))
     pylab.hold()
-    pylab.plot(results['percentage_samples'],rc,'o')
-    pylab.plot(results['percentage_samples'],ac,'o')
-    pylab.legend(['random','active'])
+    pylab.plot(results['percentage_samples'],rc,'k-o')
+    pylab.plot(results['percentage_samples'],ac,'r:o')
+    pylab.legend(['random','active'],loc='lower right')
     pylab.title("Classifier score as function of n_samples")
+    pylab.xlabel("% samples to label")
+    pylab.ylabel("Accuracy")
     pylab.savefig('active_learning_manifesto.pdf')
