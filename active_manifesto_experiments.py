@@ -134,13 +134,13 @@ def prioritize_samples(label_probas):
 def run_experiment(
         baseline_train_percentage=0.1,
         validation_percentage = 0.2,
-        n_reps=10,
+        n_reps=5,
         percentage_samples=[1,10,20,30,40,50,75,100]):
     '''
     Runs a multilabel classification experiment
     '''
     print("Loading data")
-    X_all, y_all = load_data()
+    X_all, y_all = load_data(left_right = True)
     print("Training baseline on {}% (n={})".format(baseline_train_percentage, int(len(y_all) * baseline_train_percentage)))
     print("Validation set size {}% (n={})".format(validation_percentage, int(len(y_all) * validation_percentage)))
     label_pool_percentage = 1-(baseline_train_percentage+validation_percentage)
