@@ -67,7 +67,32 @@ def load_data(folder = "data/manifesto",
     vect = HashingVectorizer()
     return vect.transform(df.content.values), df.cmp_code.apply(int).as_matrix()
 
-def compute_active_learning_curve(X_train,y_train,X_test,y_test,X_validation, y_validation, clf,percentage_samples=[1,2,5,10,15,30,50,100]):
+def smooth_probas(label_probas, eps = 1e-9):
+    # smoothing probabilities to avoid infs
+    return np.minimum(label_probas + eps, 1.)
+
+def prioritize_samples(label_probas, strategy="margin_sampling"):
+    '''
+    Some sampling strategies as in Settles' 2010 Tech Report
+    '''
+    if strategy == "entropy_sampling":
+        entropy = -(label_probas * np.log(label_probas)).sum(axis=1)
+        priorities = entropy.argsort()[::-1]
+    elif strategy == "margin_sampling":
+        label_probas.sort(axis=1)
+        priorities = (label_probas[:,-1] - label_probas[:,-2]).argsort()
+    elif strategy == "uncertainty_sampling":
+        uncertainty_sampling = 1 - label_probas.max(axis=1)
+        priorities = uncertainty_sampling.argsort()[::-1]
+
+    return priorities
+
+def compute_active_learning_curve(
+    X_tolabel,
+    y_tolabel,
+    X_validation,
+    y_validation,
+    percentage_samples=[1,2,5,10,15,30,50,100]):
     '''
     Emulate active learning with annotators:
     for a given training, test and validation set, get the validation error by
@@ -77,91 +102,79 @@ def compute_active_learning_curve(X_train,y_train,X_test,y_test,X_validation, y_
     the increase in scores with the respective sampling policy
     '''
     print('Computing active learning curve:')
-    clf = SGDClassifier(loss="log",alpha=clf.alpha).fit(X_train, y_train)
-    baseline_low = accuracy_score(y_validation, clf.predict(X_validation))
-    clf_trained = SGDClassifier(loss="log",alpha=clf.alpha).fit(vstack([X_train, X_test]), hstack([y_train, y_test]).toarray().flatten())
+    clf_trained = SGDClassifier(loss="log").fit(X_tolabel, y_tolabel)
     baseline_high = accuracy_score(y_validation, clf_trained.predict(X_validation))
-    print('\tBaseline on test: {}, baseline score on train and test {}'.format(baseline_low, baseline_high))
-
-    # score test data for active learning sorting
-    label_probas = clf.predict_proba(X_test)
-    # smoothing probabilities to avoid infs
-    eps = 1e-9
-    label_probas = np.minimum(label_probas + eps, 1.)
+    print('\tBaseline on 100% of data {}'.format(baseline_high))
 
     # run a random sampling procedure for training with increasing amounts of labels
-    random_priorities = np.random.permutation(label_probas.shape[0])
+    random_priorities = np.random.permutation(X_tolabel.shape[0])
 
     random_learning_curve = []
     for percentage in percentage_samples:
-        n_samples = int((percentage/100.) * X_test.shape[0])
-        X_labelled = X_test[random_priorities[:n_samples],:]
-        y_labelled = y_test[random_priorities[:n_samples]]
-        clf_current = SGDClassifier(loss="log",alpha=clf.alpha).fit(vstack([X_train, X_labelled]), hstack([y_train, y_labelled]).toarray().flatten())
+        n_samples = int((percentage/100.) * X_tolabel.shape[0])
+        X_labelled = X_tolabel[random_priorities[:n_samples],:]
+        y_labelled = y_tolabel[random_priorities[:n_samples]]
+        clf_current = SGDClassifier(loss="log").fit(X_labelled, y_labelled)
         current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
-        print('\t(RANDOM) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - baseline_low)/(baseline_high-baseline_low))))
         random_learning_curve.append(current_score)
+        print('\t(RANDOM) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - random_learning_curve[0])/(baseline_high-random_learning_curve[0]))))
 
-    priorities = prioritize_samples(label_probas)
+    # initially use random priorities, as we don't have a trained model
+    priorities = random_priorities.tolist()
 
     active_learning_curve = []
+    labelled = []
+
     for percentage in percentage_samples:
-        n_samples = int((percentage/100.) * X_test.shape[0])
-        X_labelled = X_test[priorities[:n_samples],:]
-        y_labelled = y_test[priorities[:n_samples]]
 
-        clf_current = SGDClassifier(loss="log",alpha=clf.alpha).fit(vstack([X_train, X_labelled]), hstack([y_train, y_labelled]).toarray().flatten())
+        n_samples = int((percentage/100.) * X_tolabel.shape[0])
+        labelled += priorities[:n_samples]
+
+        X_labelled = X_tolabel[labelled,:]
+        y_labelled = y_tolabel[labelled]
+
+        clf_current = SGDClassifier(loss="log").fit(X_labelled, y_labelled)
+
+        priorities = list(set(prioritize_samples(clf_current.predict_proba(X_tolabel))) - set(labelled))
+
         current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
-        # label_probas = clf_current.predict_proba(X_validation)
-        # priorities = prioritize_samples(label_probas)
-        print('\t(ACTIVE LEARNING) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - baseline_low)/(baseline_high-baseline_low))))
         active_learning_curve.append(current_score)
+        print('\t(ACTIVE LEARNING) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - random_learning_curve[0])/(baseline_high-random_learning_curve[0]))))
 
-    return active_learning_curve, random_learning_curve, baseline_low, baseline_high
 
-def prioritize_samples(label_probas):
-    # mean distance to hyperplane
-    # dists = abs(logit(label_probas)).mean(axis=1)
-    # priorities = dists.argsort()
+    return active_learning_curve, random_learning_curve, random_learning_curve[0], baseline_high
 
-    # entropy = -(label_probas * np.log(label_probas)).sum(axis=1)
-    # priorities = entropy.argsort()[::-1]
 
-    uncertainty_sampling = 1 - label_probas.max(axis=1)
-    priorities = uncertainty_sampling.argsort()[::-1]
-    return priorities
 
 def run_experiment(
-        baseline_train_percentage=0.1,
-        validation_percentage = 0.2,
-        n_reps=5,
-        percentage_samples=[1,10,20,30,40,50,75,100]):
+        validation_percentage = 0.3,
+        n_reps=50,
+        percentage_samples=[1,2,3,4,5,6,7,8,9,10,20,30,40,50,100]):
     '''
     Runs a multilabel classification experiment
     '''
     print("Loading data")
     X_all, y_all = load_data(left_right = True)
-    print("Training baseline on {}% (n={})".format(baseline_train_percentage, int(len(y_all) * baseline_train_percentage)))
     print("Validation set size {}% (n={})".format(validation_percentage, int(len(y_all) * validation_percentage)))
-    label_pool_percentage = 1-(baseline_train_percentage+validation_percentage)
+    label_pool_percentage = 1- validation_percentage
     print("Label pool {}% (n={})".format(label_pool_percentage,int(len(y_all) * label_pool_percentage)))
     labels = np.unique(y_all)
     results = {}
-    X_train, X_tolabel, y_train, y_tolabel = train_test_split(X_all, y_all, test_size=1-baseline_train_percentage)
-    X_test, X_validation, y_test, y_validation = train_test_split(X_tolabel, y_tolabel, test_size=validation_percentage / (1-baseline_train_percentage) )
-    print("Model Selection")
-    # do model selection on training data
-    clf = model_selection(X_train, y_train)
 
     # compute active learning curves
     active_learning_curves, random_learning_curves, baseline_lows, baseline_highs = [],[],[],[]
     for irep in range(n_reps):
         print("Repetition {}/{}".format(irep,n_reps))
-        X_train, X_tolabel, y_train, y_tolabel = train_test_split(X_all, y_all, test_size=1-baseline_train_percentage)
-        X_test, X_validation, y_test, y_validation = train_test_split(X_tolabel, y_tolabel, test_size=validation_percentage / (1-baseline_train_percentage) )
-        active_learning_curve, random_learning_curve, baseline_low, baseline_high = compute_active_learning_curve(X_train, y_train, X_test, y_test, X_validation, y_validation, clf,percentage_samples=percentage_samples)
-        active_learning_curves.append(active_learning_curve)
-        random_learning_curves.append(random_learning_curve)
+        X_tolabel, X_validation, y_tolabel, y_validation = \
+            train_test_split(X_all, y_all, test_size=validation_percentage)
+        active_curve, random_curve, baseline_low, baseline_high = \
+            compute_active_learning_curve(
+                X_tolabel, y_tolabel,
+                X_validation, y_validation,
+                percentage_samples=percentage_samples)
+
+        active_learning_curves.append(active_curve)
+        random_learning_curves.append(random_curve)
         baseline_lows.append(baseline_low)
         baseline_highs.append(baseline_high)
 
@@ -185,7 +198,7 @@ def plot_results(fn):
     bl = sp.median(sp.vstack(results['baseline_lows']), axis=0)
     bh = sp.median(sp.vstack(results['baseline_highs']), axis=0)
     pylab.figure(figsize=(10,6))
-    pylab.hold()
+    # pylab.hold()
     pylab.plot(results['percentage_samples'],rc,'k-o')
     pylab.plot(results['percentage_samples'],ac,'r:o')
     pylab.legend(['random','active'],loc='lower right')
