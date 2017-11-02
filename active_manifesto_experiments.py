@@ -144,17 +144,15 @@ def compute_active_learning_curve(
 
     return active_learning_curve, random_learning_curve, random_learning_curve[0], baseline_high
 
-
-
 def run_experiment(
         validation_percentage = 0.3,
-        n_reps=50,
+        n_reps=10,
         percentage_samples=[1,2,3,4,5,6,7,8,9,10,20,30,40,50,100]):
     '''
     Runs a multilabel classification experiment
     '''
     print("Loading data")
-    X_all, y_all = load_data(left_right = True)
+    X_all, y_all = load_data(left_right = False)
     print("Validation set size {}% (n={})".format(validation_percentage, int(len(y_all) * validation_percentage)))
     label_pool_percentage = 1- validation_percentage
     print("Label pool {}% (n={})".format(label_pool_percentage,int(len(y_all) * label_pool_percentage)))
