@@ -7,3 +7,6 @@ sklearn
 Flask==0.10.1
 Flask-OAuthlib==0.9.4
 requests==2.2.1
+bs4==0.0.1
+readability-lxml==0.6.2
+APScheduler==3.4.0
