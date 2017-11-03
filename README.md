@@ -31,3 +31,10 @@ inside the container on port 5000 and forward it to
 port 80 on the host machine.
 
 Visit `http://localhost` after you have built and ran the image.
+
+### Installing and running news crawler image
+
+```
+docker build -f Dockerfile_crawler -t crawler .
+docker run crawler
+```

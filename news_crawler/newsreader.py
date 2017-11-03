@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import urllib.request
 
+import apscheduler.schedulers.background
 import readability
 from bs4 import BeautifulSoup
 
@@ -86,7 +87,18 @@ class NewsReader(object):
         return articles
 
 
+def fetch_news():
+    reader = NewsReader()
+    news = reader.get_news()
+    # todo: dump these to a persistence (i.e. mongo)
+    # and expose to outside of container
+    for item in news:
+        print(item)
+
+
 if __name__ == "__main__":
-    reader = NewsReader(sources=['spiegel'])
-    for news_item in reader.get_news():
-        print(news_item)
+    # the scheduler is the only piece of code this container is running
+    # so using blocking scheduler is ok.
+    scheduler = apscheduler.schedulers.background.BlockingScheduler()
+    scheduler.add_job(fetch_news, 'interval', minutes=1) # fixme: increase this for production
+    scheduler.start()
