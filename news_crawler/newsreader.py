@@ -82,7 +82,7 @@ class NewsReader(object):
             for url in urls:
                 try:
                     title, text = NewsReader.fetch_url(url)
-                    articles.append((title, text))
+                    articles.append({'title': title, 'text': text})
                 except RuntimeError:
                     print('Could not get text from %s' % url)
                     pass
@@ -92,19 +92,13 @@ class NewsReader(object):
 
 def fetch_news():
     reader = NewsReader(sources=['spiegel'])
-    news = reader.get_news()
-    # todo: dump these to a persistence (i.e. mongo)
-    # and expose to outside of container
-    # for item in news:
-    #     print(item)
 
     persistence = MongoClient()
+
     db = persistence['test-database']
-    col = db['test']
-    insert_id = col.insert_one({'name': 'test'}).inserted_id
-    print("inserted doc with id", insert_id)
-    for elem in col.find():
-        print(elem)
+    col = db['articles']
+    col.delete_many({})
+    col.insert_many(reader.get_news())
 
 
 if __name__ == "__main__":
