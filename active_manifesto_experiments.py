@@ -193,7 +193,11 @@ def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
         value="score",
         condition="strategy",
         unit="repetition",
+        err_style="ci_bars",
+        ci=95,
+        lw=1,
         data=df)
+    pylab.title('prioritization strategy performances (95% CI shown)')
     pylab.savefig('manuscript/images/active_learning_manifesto.pdf')
 
 if __name__ == "__main__":
