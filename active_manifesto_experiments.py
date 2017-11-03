@@ -17,6 +17,8 @@ label2rightleft = {
     'left': [103,105,106,107,403,404,406,412,413,504,506,701,202]
     }
 
+EXPERIMENT_RESULT_FILENAME = "active_learning_curves.json"
+
 def report(results, n_top=3):
     for i in range(1, n_top + 1):
         candidates = np.flatnonzero(results['rank_test_score'] == i)
@@ -147,7 +149,8 @@ def compute_active_learning_curve(
 def run_experiment(
         validation_percentage = 0.3,
         n_reps=10,
-        percentage_samples=[1,2,3,4,5,6,7,8,9,10,20,30,40,50,100]):
+        percentage_samples=[1,2,3,4,5,6,7,8,9,10,20,30,40,50,100],
+        output_filename=EXPERIMENT_RESULT_FILENAME):
     '''
     Runs a multilabel classification experiment
     '''
@@ -184,23 +187,33 @@ def run_experiment(
         'percentage_samples':percentage_samples
         }
 
-    json.dump(results,open("active_learning_curves.json","wt"))
+    json.dump(results,open(output_filename,"wt"))
     return results
 
 
-def plot_results(fn):
+def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
     import pylab
     results = json.load(open(fn))
     ac = sp.median(sp.vstack(results['active_learning_curves']), axis=0)
+    ac_sd = np.std(sp.vstack(results['active_learning_curves']), axis=0)
     rc = sp.median(sp.vstack(results['random_learning_curves']), axis=0)
+    rc_sd = np.std(sp.vstack(results['random_learning_curves']), axis=0)
+
     bl = sp.median(sp.vstack(results['baseline_lows']), axis=0)
     bh = sp.median(sp.vstack(results['baseline_highs']), axis=0)
     pylab.figure(figsize=(10,6))
     # pylab.hold()
     pylab.plot(results['percentage_samples'],rc,'k-o')
+    pylab.errorbar(results['percentage_samples'], rc, rc_sd, ls='-', color='k')
     pylab.plot(results['percentage_samples'],ac,'r:o')
+    pylab.errorbar(results['percentage_samples'], ac, ac_sd, ls=':', color='r')
     pylab.legend(['random','active'],loc='lower right')
     pylab.title("Classifier score as function of n_samples")
     pylab.xlabel("% samples to label")
     pylab.ylabel("Accuracy")
     pylab.savefig('manuscript/images/active_learning_manifesto.pdf')
+
+
+if __name__ == "__main__":
+    run_experiment()
+    plot_results()
