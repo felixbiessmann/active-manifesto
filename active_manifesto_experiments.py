@@ -17,7 +17,7 @@ label2rightleft = {
     'left': [103,105,106,107,403,404,406,412,413,504,506,701,202]
     }
 
-EXPERIMENT_RESULT_FILENAME = "active_learning_curves.json"
+EXPERIMENT_RESULT_FILENAME = "active_learning_curves.csv"
 
 def report(results, n_top=3):
     for i in range(1, n_top + 1):
@@ -94,7 +94,8 @@ def compute_active_learning_curve(
     y_tolabel,
     X_validation,
     y_validation,
-    percentage_samples=[1,2,5,10,15,30,50,100]):
+    percentage_samples=[1,2,5,10,15,30,50,100],
+    strategies = ['entropy_sampling', 'margin_sampling', 'uncertainty_sampling']):
     '''
     Emulate active learning with annotators:
     for a given training, test and validation set, get the validation error by
@@ -110,41 +111,47 @@ def compute_active_learning_curve(
 
     # run a random sampling procedure for training with increasing amounts of labels
     random_priorities = np.random.permutation(X_tolabel.shape[0])
+    learning_curves = []
 
-    random_learning_curve = []
     for percentage in percentage_samples:
         n_samples = int((percentage/100.) * X_tolabel.shape[0])
         X_labelled = X_tolabel[random_priorities[:n_samples],:]
         y_labelled = y_tolabel[random_priorities[:n_samples]]
         clf_current = SGDClassifier(loss="log").fit(X_labelled, y_labelled)
         current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
-        random_learning_curve.append(current_score)
-        print('\t(RANDOM) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - random_learning_curve[0])/(baseline_high-random_learning_curve[0]))))
+        learning_curves.append(
+                {
+                'percentage_samples': percentage,
+                'strategy': 'random',
+                'score': current_score
+                }
+            )
+        print('\t(RANDOM) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - learning_curves[0]['score'])/(baseline_high-learning_curves[0]['score']))))
 
-    # initially use random priorities, as we don't have a trained model
-    priorities = random_priorities.tolist()
+    for strategy in strategies:
+        # initially use random priorities, as we don't have a trained model
+        priorities = random_priorities.tolist()
+        labelled = []
+        for percentage in percentage_samples:
+            n_samples = int((percentage/100.) * X_tolabel.shape[0])
+            labelled += priorities[:n_samples]
+            X_labelled = X_tolabel[labelled,:]
+            y_labelled = y_tolabel[labelled]
+            clf_current = SGDClassifier(loss="log").fit(X_labelled, y_labelled)
+            new_priorities = prioritize_samples(clf_current.predict_proba(X_tolabel), strategy)
+            priorities = list(set(new_priorities) - set(labelled))
+            current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
+            learning_curves.append(
+                    {
+                    'percentage_samples': percentage,
+                    'strategy': strategy,
+                    'score': current_score
+                    }
+                )
+            print('\t(ACTIVE {}) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(strategy, n_samples, percentage, current_score, np.round(100.0*(current_score - learning_curves[0]['score'])/(baseline_high-learning_curves[0]['score']))))
 
-    active_learning_curve = []
-    labelled = []
 
-    for percentage in percentage_samples:
-
-        n_samples = int((percentage/100.) * X_tolabel.shape[0])
-        labelled += priorities[:n_samples]
-
-        X_labelled = X_tolabel[labelled,:]
-        y_labelled = y_tolabel[labelled]
-
-        clf_current = SGDClassifier(loss="log").fit(X_labelled, y_labelled)
-
-        priorities = list(set(prioritize_samples(clf_current.predict_proba(X_tolabel))) - set(labelled))
-
-        current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
-        active_learning_curve.append(current_score)
-        print('\t(ACTIVE LEARNING) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - random_learning_curve[0])/(baseline_high-random_learning_curve[0]))))
-
-
-    return active_learning_curve, random_learning_curve, random_learning_curve[0], baseline_high
+    return pd.DataFrame(learning_curves)
 
 def run_experiment(
         validation_percentage = 0.3,
@@ -163,56 +170,31 @@ def run_experiment(
     results = {}
 
     # compute active learning curves
-    active_learning_curves, random_learning_curves, baseline_lows, baseline_highs = [],[],[],[]
+    learning_curves = []
     for irep in range(n_reps):
         print("Repetition {}/{}".format(irep,n_reps))
         X_tolabel, X_validation, y_tolabel, y_validation = \
             train_test_split(X_all, y_all, test_size=validation_percentage)
-        active_curve, random_curve, baseline_low, baseline_high = \
-            compute_active_learning_curve(
+        learning_curve = compute_active_learning_curve(
                 X_tolabel, y_tolabel,
                 X_validation, y_validation,
                 percentage_samples=percentage_samples)
+        learning_curve['repetition'] = irep
+        learning_curves.append(learning_curve)
 
-        active_learning_curves.append(active_curve)
-        random_learning_curves.append(random_curve)
-        baseline_lows.append(baseline_low)
-        baseline_highs.append(baseline_high)
-
-    results = {
-        'active_learning_curves':active_learning_curves,
-        'random_learning_curves':random_learning_curves,
-        'baseline_lows':baseline_lows,
-        'baseline_highs':baseline_highs,
-        'percentage_samples':percentage_samples
-        }
-
-    json.dump(results,open(output_filename,"wt"))
-    return results
-
+    results = pd.concat(learning_curves).to_csv(output_filename, index = False)
 
 def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
-    import pylab
-    results = json.load(open(fn))
-    ac = sp.median(sp.vstack(results['active_learning_curves']), axis=0)
-    ac_sd = np.std(sp.vstack(results['active_learning_curves']), axis=0)
-    rc = sp.median(sp.vstack(results['random_learning_curves']), axis=0)
-    rc_sd = np.std(sp.vstack(results['random_learning_curves']), axis=0)
-
-    bl = sp.median(sp.vstack(results['baseline_lows']), axis=0)
-    bh = sp.median(sp.vstack(results['baseline_highs']), axis=0)
-    pylab.figure(figsize=(10,6))
-    # pylab.hold()
-    pylab.plot(results['percentage_samples'],rc,'k-o')
-    pylab.errorbar(results['percentage_samples'], rc, rc_sd, ls='-', color='k')
-    pylab.plot(results['percentage_samples'],ac,'r:o')
-    pylab.errorbar(results['percentage_samples'], ac, ac_sd, ls=':', color='r')
-    pylab.legend(['random','active'],loc='lower right')
-    pylab.title("Classifier score as function of n_samples")
-    pylab.xlabel("% samples to label")
-    pylab.ylabel("Accuracy")
+    import seaborn, pylab
+    df = pd.read_csv(fn)
+    pylab.figure()
+    seaborn.tsplot(
+        time="percentage_samples",
+        value="score",
+        condition="strategy",
+        unit="repetition",
+        data=df)
     pylab.savefig('manuscript/images/active_learning_manifesto.pdf')
-
 
 if __name__ == "__main__":
     run_experiment()
