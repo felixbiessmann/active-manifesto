@@ -36,5 +36,5 @@ Visit `http://localhost` after you have built and ran the image.
 
 ```
 docker build -f Dockerfile_crawler -t crawler .
-docker run crawler
+docker run -p 0.0.0.0:27017:27017 crawler
 ```
