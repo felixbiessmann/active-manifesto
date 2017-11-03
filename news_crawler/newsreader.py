@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 import urllib.request
 
+import os
+
 import apscheduler.schedulers.background
 import readability
 from bs4 import BeautifulSoup
+from pymongo import MongoClient
 
 
 class NewsReader(object):
@@ -88,17 +91,28 @@ class NewsReader(object):
 
 
 def fetch_news():
-    reader = NewsReader()
+    reader = NewsReader(sources=['spiegel'])
     news = reader.get_news()
     # todo: dump these to a persistence (i.e. mongo)
     # and expose to outside of container
-    for item in news:
-        print(item)
+    # for item in news:
+    #     print(item)
+
+    persistence = MongoClient()
+    db = persistence['test-database']
+    col = db['test']
+    insert_id = col.insert_one({'name': 'test'}).inserted_id
+    print("inserted doc with id", insert_id)
+    for elem in col.find():
+        print(elem)
 
 
 if __name__ == "__main__":
+    os.system("mongod&") # fixme: quick hack to make mongod run
+
     # the scheduler is the only piece of code this container is running
     # so using blocking scheduler is ok.
     scheduler = apscheduler.schedulers.background.BlockingScheduler()
-    scheduler.add_job(fetch_news, 'interval', minutes=1) # fixme: increase this for production
+    # fixme: increase the interval for production
+    scheduler.add_job(fetch_news, 'interval', minutes=1)
     scheduler.start()
