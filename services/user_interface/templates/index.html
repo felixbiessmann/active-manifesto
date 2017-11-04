@@ -25,7 +25,8 @@
             integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
             crossorigin="anonymous"></script>
 
-    <script>
+</head>
+<script>
 
         function makeHttpObject() {
           try {return new XMLHttpRequest();}
@@ -49,39 +50,42 @@
             console.log(samples);
             var markup = "";
             for(var i = 0; i < samples.length; i++) {
-                markup += "<tr><td>" + samples[i]['text'] + "</td><td>todo radio buttons</td></tr>";
+                console.log(i)
+                var label = "label_" + i
+                markup +=
+                    "<tr><td>" + samples[i]['text'] + "</td>" +
+                    "<td>" +
+                    "<input type=\"radio\" name=\""+label+"\" value=\"left\">left" +
+                    "<input type=\"radio\" name=\""+label+"\" checked=\"checked\" value=\"neutral\">neutral" +
+                    "<input type=\"radio\" name=\""+label+"\" value=\right\">right" +
+                    "</td>" +
+                    "</tr>";
             }
             $("table tbody tr").remove();
             $("table tbody").append(markup);
         }
 
-        function send_batch_feedback(article_id, keywords, annotator_name) {
-            var xhr = new XMLHttpRequest();
-            var url = hostname_with_port + "/cancer/json/feedback_batch";
-            xhr.open("POST", url, true);
-            xhr.setRequestHeader("Content-type", "application/json");
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    var json = JSON.parse(xhr.responseText);
-                    console.log(json);
-                }
-            };
-            var data = JSON.stringify(
-                {
-                    "article_id": article_id,
-                    "keywords": keywords,
-                    "annotator_name": annotator_name
-                }
-            );
-            xhr.send(data);
-        }
-
         function get_radio_value_and_send() {
-            // todo
+            var selected_radios = $("table tr td input:checked").map(function() {
+                return this.value;
+            });
+            var texts = $("table tr td:first-child").map(function() {
+                return $(this).text();
+            });
+            var data = [];
+            for(var i = 0; i < selected_radios.length; i++) {
+                data.push({'text': texts[i], 'label': selected_radios[i]})
+            }
+            data = {
+                'data': data
+            };
+            var request = makeHttpObject();
+            request.open("POST", "/user_labels", false);
+            request.setRequestHeader("Content-type", "application/json");
+            request.send(JSON.stringify(data));
         }
 
     </script>
-</head>
 
 <body>
 <div class="container-fluid">
