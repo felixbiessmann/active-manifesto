@@ -1,0 +1,10 @@
+version: '3'
+services:
+  news_crawler:
+    build: news_crawler
+    ports:
+     - "0.0.0.0:27017:27017"
+  twitter_app:
+    build: apps
+    ports:
+     - "0.0.0.0:5000:5000"
