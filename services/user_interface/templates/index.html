@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Active Manifesto</title>
+
+    <meta name="description" content="Source code generated using layoutit.com">
+    <meta name="author" content="LayoutIt!">
+
+    <script
+            src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+
+    <script>
+
+        function get_samples() {
+            // todo: actually talk to model http facade
+            return [
+                    {'text': 'hello test'},
+                    {'text': 'second test'}
+            ]
+        }
+
+        function get_and_insert_samples() {
+            var samples = get_samples();
+            console.log(samples);
+            var markup = "";
+            for(var i = 0; i < samples.length; i++) {
+                markup += "<tr><td>" + samples[i]['text'] + "</td><td>todo radio buttons</td></tr>";
+            }
+            $("table tbody").append(markup);
+        }
+
+        function send_batch_feedback(article_id, keywords, annotator_name) {
+            var xhr = new XMLHttpRequest();
+            var url = hostname_with_port + "/cancer/json/feedback_batch";
+            xhr.open("POST", url, true);
+            xhr.setRequestHeader("Content-type", "application/json");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var json = JSON.parse(xhr.responseText);
+                    console.log(json);
+                }
+            };
+            var data = JSON.stringify(
+                {
+                    "article_id": article_id,
+                    "keywords": keywords,
+                    "annotator_name": annotator_name
+                }
+            );
+            xhr.send(data);
+        }
+
+        function get_radio_value_and_send() {
+            // todo
+        }
+
+    </script>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="text-center">
+                Active Manifesto
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-2">
+            <h2>Interface buttons</h2>
+            <button type="button" class="btn btn-info" onclick="get_and_insert_samples()">
+                Get samples
+            </button>
+            <hr>
+            <button type="button" class="btn btn-success" onclick="get_radio_value_and_send()">
+                submit labels
+            </button>
+        </div>
+        <div class="col-md-10">
+            <h2>
+                Political Samples
+            </h2>
+            <div class="row">
+                <div class="col-md-12">
+                    <table class="table table-bordered">
+                        <thead>
+                        <tr>
+                            <th>
+                                Sample text
+                            </th>
+                            <th>
+                                User Label
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
