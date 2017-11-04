@@ -8,3 +8,7 @@ services:
     build: apps
     ports:
      - "0.0.0.0:5000:5000"
+  user_interface:
+    build: user_interface
+    ports:
+     - "0.0.0.0:8080:8080"
