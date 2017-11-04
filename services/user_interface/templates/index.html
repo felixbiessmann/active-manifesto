@@ -27,12 +27,21 @@
 
     <script>
 
+        function makeHttpObject() {
+          try {return new XMLHttpRequest();}
+          catch (error) {}
+          try {return new ActiveXObject("Msxml2.XMLHTTP");}
+          catch (error) {}
+          try {return new ActiveXObject("Microsoft.XMLHTTP");}
+          catch (error) {}
+          throw new Error("Could not create HTTP request object.");
+        }
+
         function get_samples() {
-            // todo: actually talk to model http facade
-            return [
-                    {'text': 'hello test'},
-                    {'text': 'second test'}
-            ]
+            var request = makeHttpObject();
+            request.open("GET", "/get_samples", false);
+            request.send(null);
+            return JSON.parse(request.responseText)['samples'];
         }
 
         function get_and_insert_samples() {
@@ -42,6 +51,7 @@
             for(var i = 0; i < samples.length; i++) {
                 markup += "<tr><td>" + samples[i]['text'] + "</td><td>todo radio buttons</td></tr>";
             }
+            $("table tbody tr").remove();
             $("table tbody").append(markup);
         }
 
@@ -83,7 +93,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-2">
+        <div class="col-md-3">
             <h2>Interface buttons</h2>
             <button type="button" class="btn btn-info" onclick="get_and_insert_samples()">
                 Get samples
@@ -92,8 +102,10 @@
             <button type="button" class="btn btn-success" onclick="get_radio_value_and_send()">
                 submit labels
             </button>
+            <hr>
+            todo: display area for bias estimation
         </div>
-        <div class="col-md-10">
+        <div class="col-md-9">
             <h2>
                 Political Samples
             </h2>
