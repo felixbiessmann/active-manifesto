@@ -46,7 +46,7 @@ def model_selection(X,y):
         report(gs_clf.cv_results_)
     return gs_clf.best_estimator_
 
-def load_data(folder = "data/manifesto",
+def load_data(folder = "../data/manifesto",
         min_label_count = 1000,
         left_right = False):
     df = pd.concat([pd.read_csv(fn) for fn in glob.glob(os.path.join(folder,"*.csv"))]).dropna(subset=['cmp_code','content'])
@@ -95,7 +95,7 @@ def compute_active_learning_curve(
     X_validation,
     y_validation,
     percentage_samples=[1,2,5,10,15,30,50,100],
-    strategies = ['entropy_sampling', 'margin_sampling', 'uncertainty_sampling']):
+    strategies = ['margin_sampling']):
     '''
     Emulate active learning with annotators:
     for a given training, test and validation set, get the validation error by
@@ -131,15 +131,18 @@ def compute_active_learning_curve(
     for strategy in strategies:
         # initially use random priorities, as we don't have a trained model
         priorities = random_priorities.tolist()
+        N = X_tolabel.shape[0]
+        all_indices = set(range(N))
         labelled = []
         for percentage in percentage_samples:
-            n_samples = int((percentage/100.) * X_tolabel.shape[0])
-            labelled += priorities[:n_samples]
+            n_training_samples = int((percentage/100.) * N) - len(labelled)
+            labelled += priorities[:n_training_samples]
             X_labelled = X_tolabel[labelled,:]
             y_labelled = y_tolabel[labelled]
             clf_current = SGDClassifier(loss="log").fit(X_labelled, y_labelled)
-            new_priorities = prioritize_samples(clf_current.predict_proba(X_tolabel), strategy)
-            priorities = list(set(new_priorities) - set(labelled))
+
+            # get the not yet labeled data point indices
+            to_label = list(all_indices - set(labelled))
             current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
             learning_curves.append(
                     {
@@ -148,15 +151,21 @@ def compute_active_learning_curve(
                     'score': current_score
                     }
                 )
-            print('\t(ACTIVE {}) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(strategy, n_samples, percentage, current_score, np.round(100.0*(current_score - learning_curves[0]['score'])/(baseline_high-learning_curves[0]['score']))))
+            print('\t(ACTIVE {}) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(strategy, n_training_samples, percentage, current_score, np.round(100.0*(current_score - learning_curves[0]['score'])/(baseline_high-learning_curves[0]['score']))))
+
+            if len(to_label) > 0:
+                # prioritize the not yet labeled data points
+                priorities = prioritize_samples(clf_current.predict_proba(X_tolabel[to_label,:]), strategy)
+                # get indices in original data set for not yet labeled data
+                priorities = [to_label[idx] for idx in priorities]
 
 
     return pd.DataFrame(learning_curves)
 
 def run_experiment(
         validation_percentage = 0.3,
-        n_reps=10,
-        percentage_samples=[1,2,3,4,5,6,7,8,9,10,20,30,40,50,100],
+        n_reps=50,
+        percentage_samples=[1,10,20,30,40,50,100],
         output_filename=EXPERIMENT_RESULT_FILENAME):
     '''
     Runs a multilabel classification experiment
@@ -198,7 +207,7 @@ def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
         lw=1,
         data=df)
     pylab.title('prioritization strategy performances (95% CI shown)')
-    pylab.savefig('manuscript/images/active_learning_manifesto.pdf')
+    pylab.savefig('../manuscript/images/active_learning_manifesto.pdf')
 
 if __name__ == "__main__":
     run_experiment()
