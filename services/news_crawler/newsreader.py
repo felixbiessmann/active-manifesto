@@ -102,7 +102,7 @@ def fetch_news():
 
 
 if __name__ == "__main__":
-    os.system("mongod&") # fixme: quick hack to make mongod run
+    os.system("mongod&")  # fixme: quick hack to make mongod run
 
     # the scheduler is the only piece of code this container is running
     # so using blocking scheduler is ok.

@@ -30,4 +30,4 @@ EXPOSE 28017
 # Install any needed packages specified in requirements.txt
 RUN pip install -r requirements.txt
 
-CMD ["python", "news_crawler/newsreader.py"]
+CMD ["python", "newsreader.py"]
