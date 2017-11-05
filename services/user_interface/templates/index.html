@@ -80,9 +80,10 @@
                 'data': data
             };
             var request = makeHttpObject();
-            request.open("POST", "/user_labels", false);
+            var json = JSON.stringify(data);
+            request.open("POST", "/user_labels");
             request.setRequestHeader("Content-type", "application/json");
-            request.send(JSON.stringify(data));
+            request.send(json);
         }
 
     </script>

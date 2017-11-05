@@ -12,7 +12,7 @@ app.secret_key = 'development'
 
 @app.route('/user_labels', methods=['POST'])
 def user_labels():
-    # todo: forward to model http facade and receive bias estimation: manifesto_model:5000
+    # todo: bias estimation of this request and return estimate in response
     labels = json.loads(request.data.decode('utf-8'))
     print(labels)
     for entry in labels['data']:
@@ -22,7 +22,7 @@ def user_labels():
 
 @app.route('/get_samples')
 def get_samples():
-    # todo: call model http facade here
+    # todo: actually use model to return samples
     response = {
         'samples': [
             {'text': 'abc'},
@@ -32,10 +32,5 @@ def get_samples():
     return json.dumps(response)
 
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=5000)
