@@ -1,20 +1,47 @@
 # -*- coding: utf-8 -*-
+import json
 import os
-import manifesto_data
-
-from flask import Flask, jsonify, request
 import sqlite3
 import urllib.parse
+
+from flask import Flask, jsonify, request
+from manifesto_data import ManifestoDataLoader
+
 
 app = Flask(__name__)
 
 DEBUG = True  # os.environ.get('DEBUG') is not None
 VERSION = 0.1
 
+DB_FILENAME = '/tmp/db/test.db'
+
 
 @app.route("/", methods=['POST'])
 def index():
     return jsonify({})
+
+
+@app.route("/texts_and_labels", methods=['POST'])
+def texts_and_labels():
+    """
+    stores the POST-body texts and labels.
+
+    expects a POST-body in the format:
+    {
+        "data": [
+            {"text": "...", "label": 304},
+            ...
+        ]
+    }
+    """
+    texts_with_labels = json.loads(request.get_data(as_text=True))['data']
+    texts = map(lambda entry: entry['text'], texts_with_labels)
+    labels = map(lambda entry: entry['label'], texts_with_labels)
+
+    insert_into(DB_FILENAME, texts, labels, 'user')
+    n_inserts = len(texts_with_labels)
+
+    return jsonify({'n_inserted': n_inserts}), 201
 
 
 @app.route("/texts", methods=['GET'])
@@ -24,8 +51,43 @@ def texts():
     return jsonify(text_data)
 
 
+def insert_into(database_filename, texts, labels, annotation_source):
+    """
+    inserts the texts and labels.
+
+    :param database_filename: name of the sqlite3 database.
+    :param texts: iterable of string.
+    :param labels: iterable of int.
+    :param annotation_source: string, manifesto or user.
+    """
+    conn = sqlite3.connect(database_filename)
+    c = conn.cursor()
+
+    pks = []
+    for text in texts:
+        c.execute(
+            "INSERT INTO texts(statement) VALUES (?)",
+            (text,)
+        )
+        pks.append(c.lastrowid)
+
+    for text_id, label in zip(pks, labels):
+        c.execute(
+            """
+            INSERT INTO labels (texts_id, label, source) VALUES
+            (?, ?, ?)""",
+            (text_id, label, annotation_source)
+        )
+
+    conn.commit()
+
+
 def get_texts(n_texts):
-    conn = sqlite3.connect('/tmp/db/test.db')
+    """
+    return at most `n_texts` from the underlying storage.
+    :param n_texts: how many texts to retrieve, integer.
+    """
+    conn = sqlite3.connect(DB_FILENAME)
     c = conn.cursor()
     return [
         {
@@ -49,7 +111,13 @@ def get_texts(n_texts):
 
 
 def create_manifesto_storage(texts, labels):
-    conn = sqlite3.connect('/tmp/db/test.db')
+    """
+    creates required tables and inserts all of the given texts and labels.
+
+    :param texts: iterable of political texts.
+    :param labels: iterable of political text labels.
+    """
+    conn = sqlite3.connect(DB_FILENAME)
     c = conn.cursor()
 
     c.execute('DROP TABLE IF EXISTS texts')
@@ -73,57 +141,48 @@ def create_manifesto_storage(texts, labels):
             )
         '''
     )
-
-    pks = []
-    for text in texts:
-        c.execute(
-            "INSERT INTO texts(statement) VALUES (?)",
-            (text, )
-        )
-        pks.append(c.lastrowid)
-
-    for text_id, label in zip(pks, labels):
-        c.execute(
-            """
-            INSERT INTO labels (texts_id, label, source) VALUES
-            (?, ?, ?)""",
-            (text_id, label, 'manifesto_project')
-        )
-
     conn.commit()
-
-    for statement, label, source, text_created, label_created in c.execute(
-            """
-            SELECT
-                t.statement,
-                l.label,
-                l.source,
-                t.created_at,
-                l.created_at
-            FROM texts t
-            INNER JOIN labels l ON l.texts_id = t.id
-            LIMIT 10"""
-    ):
-        print(statement, label, source)
-
-    print(
-        'inserted',
-        c.execute("SELECT count(1) FROM texts").fetchone(),
-        'texts with',
-        c.execute("SELECT count(1) FROM labels").fetchone(),
-        'labels'
-    )
-
     conn.close()
+
+    insert_into(DB_FILENAME, texts, labels, 'manifesto')
+
+    # for statement, label, source, text_created, label_created in c.execute(
+    #         """
+    #         SELECT
+    #             t.statement,
+    #             l.label,
+    #             l.source,
+    #             t.created_at,
+    #             l.created_at
+    #         FROM texts t
+    #         INNER JOIN labels l ON l.texts_id = t.id
+    #         LIMIT 10"""
+    # ):
+    #     print(statement, label, source)
+    #
+    # print(
+    #     'inserted',
+    #     c.execute("SELECT count(1) FROM texts").fetchone(),
+    #     'texts with',
+    #     c.execute("SELECT count(1) FROM labels").fetchone(),
+    #     'labels'
+    # )
+    #
+    # conn.close()
 
 
 if __name__ == "__main__":
     api_key = os.environ.get("WZB_API_KEY")
 
-    loader = manifesto_data.ManifestoDataLoader(api_key)
+    loader = ManifestoDataLoader(api_key)
     texts, codes = loader.get_manifesto_texts()
-
     create_manifesto_storage(texts, codes)
 
     port = os.environ.get("HTTP_PORT")
-    app.run(host='0.0.0.0', port=port, debug=DEBUG)
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=DEBUG,
+        use_reloader=False  # with reloader, caused main to be called twice
+
+    )
