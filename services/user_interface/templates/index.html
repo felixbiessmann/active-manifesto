@@ -81,7 +81,7 @@
             };
             var request = makeHttpObject();
             request.open("POST", "/user_labels", false);
-            request.setRequestHeader("Content-type", "application/json");
+            request.setRequestHeader("Content-Type", "application/json");
             request.send(JSON.stringify(data));
         }
 

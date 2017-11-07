@@ -12,13 +12,13 @@ app.secret_key = 'development'
 
 @app.route('/user_labels', methods=['POST'])
 def user_labels():
-    # fixme: check bytes encoding here
     # todo: forward to model http facade and receive bias estimation
-    labels = json.loads(request.data.decode('utf-8'))
+    labels = json.loads(request.get_data(as_text=True))
     print(labels)
     for entry in labels['data']:
         print(entry)
     return '{}'
+
 
 @app.route('/get_samples')
 def get_samples():
