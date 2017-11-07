@@ -50,6 +50,28 @@ class Classifier:
         print('Loading classifier')
         self.clf = joblib.load('classifier.pickle')
 
+    @staticmethod
+    def smooth_probas(label_probas, eps = 1e-9):
+        # smoothing probabilities to avoid infs
+        return sp.minimum(label_probas + eps, 1.)
+
+    def prioritize(self, texts, strategy = 'margin_sampling'):
+        '''
+        Some sampling strategies as in Settles' 2010 Tech Report
+        '''
+        label_probas = self.smooth_probas(self.clf.predict_proba(texts))
+        if strategy == "entropy_sampling":
+            entropy = -(label_probas * np.log(label_probas)).sum(axis=1)
+            priorities = entropy.argsort()[::-1]
+        elif strategy == "margin_sampling":
+            label_probas.sort(axis=1)
+            priorities = (label_probas[:,-1] - label_probas[:,-2]).argsort()
+        elif strategy == "uncertainty_sampling":
+            uncertainty_sampling = 1 - label_probas.max(axis=1)
+            priorities = uncertainty_sampling.argsort()[::-1]
+
+        return [texts[p] for p in priorities]
+
     def predict(self,text):
         '''
         Uses scikit-learn Bag-of-Word extractor and classifier and
