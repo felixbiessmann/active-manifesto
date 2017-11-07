@@ -20,6 +20,26 @@ There should be the following docker images:
 
 ## build and test single containers
 
+### manifesto data container
+
+add wzb manifesto api key in `persistence/Dockerfile` to environment variable.
+
+```
+cd persistence
+docker build -t persistence .
+docker run persistence
+```
+
+this will start the manifesto data download and sqlite3 import.
+the data should be accessd via HTTP, e.g:
+
+```
+curl "localhost:8888/texts?n=300"
+```
+
+will return 300 texts with labels and label sources.
+
+
 ### twitter app
 
 To build and run the twitter-app image:
