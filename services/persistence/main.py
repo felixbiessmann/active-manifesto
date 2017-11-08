@@ -13,7 +13,8 @@ app = Flask(__name__)
 DEBUG = True  # os.environ.get('DEBUG') is not None
 VERSION = 0.1
 
-DB_FILENAME = '/tmp/db/test.db'
+DB_FILENAME = '/db/test.db'
+print('Using database', DB_FILENAME)
 
 
 @app.route("/", methods=['POST'])
@@ -26,7 +27,7 @@ def texts_and_labels():
     """
     stores the POST-body texts and labels.
 
-    expects a POST-body in the format:
+    expe                                                                                                                                                                                                            cts a POST-body in the format:
     {
         "data": [
             {"text": "...", "label": 304},
@@ -46,7 +47,7 @@ def texts_and_labels():
 
 @app.route("/texts", methods=['GET'])
 def texts():
-    n_texts = urllib.parse.quote(request.args.get('n'))
+    n_texts = request.args.get('n')
     text_data = {'data': get_texts(n_texts)}
     return jsonify(text_data)
 

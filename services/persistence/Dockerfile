@@ -12,7 +12,4 @@ ADD . /api
 
 RUN pip install -r requirements.txt
 
-ENV WZB_API_KEY=
-ENV HTTP_PORT=8888
-
 CMD ["python", "main.py"]

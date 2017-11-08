@@ -1,20 +1,38 @@
 # coding: utf-8
 
-from flask import Flask
-from flask import render_template, redirect, url_for, request
 import json
+import os
+import requests
 
+from flask import Flask
+from flask import render_template, request
 
 app = Flask(__name__)
 app.debug = True
 app.secret_key = 'development'
 
+PERSISTENCE_HTTP_PORT = os.environ.get('PERSISTENCE_HTTP_PORT')
+HTTP_PORT = int(os.environ.get('HTTP_PORT'))
+
 
 @app.route('/user_labels', methods=['POST'])
 def user_labels():
-    # todo: forward to model http facade and receive bias estimation
+    """
+    receives the texts and labels from the UI.
+    fixme: currently the labels are left, right or neutral.
+    in the manifesto corpus and the database the labels are integers 100-600.
+    fixme: also the id of the text should be transmitted back to the persistence, s.t. we can insert a label for the existing text.
+    """
     labels = json.loads(request.get_data(as_text=True))
+    # registered hostname of service in docker-compose network
+    url = 'http://persistence:{}/texts_and_labels'.format(PERSISTENCE_HTTP_PORT)
     print(labels)
+    r = requests.post(
+        url=url,
+        json=labels
+    )
+    print(r.status_code)
+    print(r.json())
     for entry in labels['data']:
         print(entry)
     return '{}'
@@ -22,20 +40,18 @@ def user_labels():
 
 @app.route('/get_samples')
 def get_samples():
-    # todo: call model http facade here
-    response = {
-        'samples': [
-            {'text': 'abc'},
-            {'text': 'abcd'}
-        ]
-    }
-    return json.dumps(response)
+    # todo: add request parameter to endpoint
+    r = requests.get('http://persistence:{}/texts?n=8'.format(PERSISTENCE_HTTP_PORT))
+    return json.dumps(r.json())
 
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template(
+        'index.html',
+        persistence_host='http://0.0.0.0:'+str(PERSISTENCE_HTTP_PORT)
+    )
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=HTTP_PORT)
