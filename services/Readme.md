@@ -35,6 +35,8 @@ the data should be accessd via HTTP, e.g:
 
 ```
 curl "localhost:8888/texts?n=300"
+# group by label, count
+curl "localhost:8888/texts?n=300" | jq '[{label: .data[].label}]' | jq 'group_by(.label)' | jq 'map({n_texts: length, label: .[0].label})' | jq 'sort_by(.n_texts)'
 ```
 
 will return 300 texts with labels and label sources.

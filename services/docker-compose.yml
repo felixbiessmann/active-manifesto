@@ -1,14 +1,19 @@
 version: '3'
 services:
-  news_crawler:
-    build: news_crawler
+  persistence:
+    build: persistence
     ports:
-     - "0.0.0.0:27017:27017"
-  twitter_app:
-    build: apps
-    ports:
-     - "0.0.0.0:5000:5000"
+     - "0.0.0.0:8888:8888"
+    environment:
+      - PYTHONUNBUFFERED=0 # unbuffered I/O with print etc. to always print to the console
+      - HTTP_PORT=8888
+      - WZB_API_KEY=
+
   user_interface:
     build: user_interface
     ports:
      - "0.0.0.0:8080:8080"
+    environment:
+      - PYTHONUNBUFFERED=0 # unbuffered I/O with print etc. to always print to the console
+      - HTTP_PORT=8080
+      - PERSISTENCE_HTTP_PORT=8888

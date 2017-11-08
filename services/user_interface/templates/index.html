@@ -42,7 +42,7 @@
             var request = makeHttpObject();
             request.open("GET", "/get_samples", false);
             request.send(null);
-            return JSON.parse(request.responseText)['samples'];
+            return JSON.parse(request.responseText)['data'];
         }
 
         function get_and_insert_samples() {
@@ -53,11 +53,11 @@
                 console.log(i)
                 var label = "label_" + i
                 markup +=
-                    "<tr><td>" + samples[i]['text'] + "</td>" +
+                    "<tr><td>" + samples[i]['statement'] + "</td>" +
                     "<td>" +
                     "<input type=\"radio\" name=\""+label+"\" value=\"left\">left" +
                     "<input type=\"radio\" name=\""+label+"\" checked=\"checked\" value=\"neutral\">neutral" +
-                    "<input type=\"radio\" name=\""+label+"\" value=\right\">right" +
+                    "<input type=\"radio\" name=\""+label+"\" value=\"right\">right" +
                     "</td>" +
                     "</tr>";
             }
@@ -81,7 +81,7 @@
             };
             var request = makeHttpObject();
             request.open("POST", "/user_labels", false);
-            request.setRequestHeader("Content-type", "application/json");
+            request.setRequestHeader("Content-Type", "application/json");
             request.send(JSON.stringify(data));
         }
 
