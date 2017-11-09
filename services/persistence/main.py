@@ -27,16 +27,16 @@ def texts_and_labels():
     expects a POST-body in the format:
     {
         "data": [
-            {"text": "...", "label": "left"},
+            {"text_id": 17342, "label": "left"},
             ...
         ]
     }
     """
     texts_with_labels = json.loads(request.get_data(as_text=True))['data']
-    texts = map(lambda entry: entry['text'], texts_with_labels)
+    text_ids = map(lambda entry: entry['text_id'], texts_with_labels)
     labels = map(lambda entry: entry['label'], texts_with_labels)
 
-    insert_into(DB_FILENAME, texts, labels, 'user')
+    insert_into(DB_FILENAME, text_ids, labels, 'user')
     n_inserts = len(texts_with_labels)
 
     return jsonify({'n_inserted': n_inserts}), 201
@@ -49,27 +49,19 @@ def texts():
     return jsonify(text_data)
 
 
-def insert_into(database_filename, texts, labels, annotation_source):
+def insert_into(database_filename, text_ids, labels, annotation_source):
     """
     inserts the texts and labels.
 
     :param database_filename: name of the sqlite3 database.
-    :param texts: iterable of string.
+    :param text_ids: iterable of int, ids of the texts.
     :param labels: iterable of int.
     :param annotation_source: string, manifesto or user.
     """
     conn = sqlite3.connect(database_filename)
     c = conn.cursor()
 
-    pks = []
-    for text in texts:
-        c.execute(
-            "INSERT INTO texts(statement) VALUES (?)",
-            (text,)
-        )
-        pks.append(c.lastrowid)
-
-    for text_id, label in zip(pks, labels):
+    for text_id, label in zip(text_ids, labels):
         c.execute(
             """
             INSERT INTO labels (texts_id, label, source) VALUES
@@ -78,6 +70,7 @@ def insert_into(database_filename, texts, labels, annotation_source):
         )
 
     conn.commit()
+    conn.close()
 
 
 def get_texts(n_texts):
@@ -89,12 +82,14 @@ def get_texts(n_texts):
     c = conn.cursor()
     return [
         {
+            'text_id': text_id,
             'statement': statement,
             'label': label,
             'source': source
-        } for statement, label, source, _, _ in c.execute(
+        } for text_id, statement, label, source, _, _ in c.execute(
         """
         SELECT
+            t.id text_id,
             t.statement,
             l.label,
             l.source,
@@ -102,6 +97,7 @@ def get_texts(n_texts):
             l.created_at
         FROM texts t
         INNER JOIN labels l ON l.texts_id = t.id
+        ORDER BY RANDOM()
         LIMIT ?""",
         (n_texts, )
         )
