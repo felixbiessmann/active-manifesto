@@ -13,7 +13,7 @@ app = Flask(__name__)
 DEBUG = True  # os.environ.get('DEBUG') is not None
 VERSION = 0.1
 
-DB_FILENAME = '/db/test.db'
+DB_FILENAME = os.environ.get('DB_PATH')
 print('Using database', DB_FILENAME)
 
 
@@ -30,7 +30,7 @@ def texts_and_labels():
     expe                                                                                                                                                                                                            cts a POST-body in the format:
     {
         "data": [
-            {"text": "...", "label": 304},
+            {"text": "...", "label": "left"},
             ...
         ]
     }
@@ -179,11 +179,10 @@ if __name__ == "__main__":
     texts, codes = loader.get_manifesto_texts()
     create_manifesto_storage(texts, codes)
 
-    port = os.environ.get("HTTP_PORT")
+    port = int(os.environ.get("HTTP_PORT"))
     app.run(
         host='0.0.0.0',
         port=port,
         debug=DEBUG,
         use_reloader=False  # with reloader, caused main to be called twice
-
     )

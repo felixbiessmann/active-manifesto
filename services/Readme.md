@@ -8,14 +8,11 @@ sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 ```
 
-To build all of the images from the `docker-compose.yml`, run: `docker-compose up`.
+To build and run all of the images from the `docker-compose.yml`, run: `docker-compose up`.
 
-
-There should be the following docker images:
-
-* user interface (with potential social media integrations)
-* manifesto model with http facade
-* news crawler exposing news articles via mongodb.
+When the containers have started, visit `http://localhost:8080` for the UI.
+Once the persistence container has started it's web api you can request samples
+and submit user labels.
 
 
 ## build and test single containers

@@ -40,7 +40,7 @@
 
         function get_samples() {
             var request = makeHttpObject();
-            request.open("GET", "/get_samples", false);
+            request.open("GET", "/get_samples?n=3", false);
             request.send(null);
             return JSON.parse(request.responseText)['data'];
         }
@@ -55,8 +55,8 @@
                 markup +=
                     "<tr><td>" + samples[i]['statement'] + "</td>" +
                     "<td>" +
-                    "<input type=\"radio\" name=\""+label+"\" value=\"left\">left" +
-                    "<input type=\"radio\" name=\""+label+"\" checked=\"checked\" value=\"neutral\">neutral" +
+                    "<input type=\"radio\" name=\""+label+"\" value=\"left\">left<br>" +
+                    "<input type=\"radio\" name=\""+label+"\" checked=\"checked\" value=\"neutral\">neutral<br>" +
                     "<input type=\"radio\" name=\""+label+"\" value=\"right\">right" +
                     "</td>" +
                     "</tr>";

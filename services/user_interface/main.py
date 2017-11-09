@@ -40,8 +40,13 @@ def user_labels():
 
 @app.route('/get_samples')
 def get_samples():
-    # todo: add request parameter to endpoint
-    r = requests.get('http://persistence:{}/texts?n=8'.format(PERSISTENCE_HTTP_PORT))
+    n_texts = request.args.get('n')
+    r = requests.get(
+        'http://persistence:{}/texts?n={}'.format(
+            PERSISTENCE_HTTP_PORT,
+            n_texts
+        )
+    )
     return json.dumps(r.json())
 
 

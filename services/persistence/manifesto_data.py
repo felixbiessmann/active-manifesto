@@ -13,6 +13,19 @@ class ManifestoDataLoader(object):
         self.version = "MPDS2016b"
         self.api_key = api_key
 
+        self.label2rightleft = {
+            'right': [104, 201, 203, 305, 401, 402, 407, 414, 505, 601, 603, 605, 606],
+            'left': [103, 105, 106, 107, 403, 404, 406, 412, 413, 504, 506, 701, 202]
+        }
+
+    def cmp_code_2_left_right_neutral(self, cmp_code):
+        if cmp_code in self.label2rightleft['left']:
+            return 'left'
+        elif cmp_code in self.label2rightleft['right']:
+            return 'right'
+        else:
+            return 'neutral'
+
     @staticmethod
     def get_url(url):
         return urllib.request.urlopen(url).read().decode()
@@ -80,7 +93,7 @@ class ManifestoDataLoader(object):
         manifesto_texts = self.get_texts()
         df = pd.DataFrame(manifesto_texts, columns=['cmp_code', 'content'])
         df = df[df.content.apply(lambda x: len(str(x)) > min_len)]
-        return df['content'].map(str).tolist(), df['cmp_code'].map(int).tolist()
+        return df['content'].map(str).tolist(), df['cmp_code'].map(int).map(self.cmp_code_2_left_right_neutral).tolist()
 
 
 if __name__ == "__main__":
