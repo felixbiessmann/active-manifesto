@@ -7,7 +7,12 @@ services:
     environment:
       - PYTHONUNBUFFERED=0 # unbuffered I/O with print etc. to always print to the console
       - HTTP_PORT=8888
-      - WZB_API_KEY=
+      - DB_PATH=/db/active-manifesto.db
+    volumes:
+      # mount host database inside container
+      - ./db/active-manifesto.db:/db/active-manifesto.db
+      # mount development files to api
+      - ./persistence:/api
 
   user_interface:
     build: user_interface
@@ -17,3 +22,6 @@ services:
       - PYTHONUNBUFFERED=0 # unbuffered I/O with print etc. to always print to the console
       - HTTP_PORT=8080
       - PERSISTENCE_HTTP_PORT=8888
+    volumes:
+      # mount development files to app
+      - ./user_interface:/app

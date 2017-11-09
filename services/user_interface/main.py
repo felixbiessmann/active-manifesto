@@ -19,9 +19,6 @@ HTTP_PORT = int(os.environ.get('HTTP_PORT'))
 def user_labels():
     """
     receives the texts and labels from the UI.
-    fixme: currently the labels are left, right or neutral.
-    in the manifesto corpus and the database the labels are integers 100-600.
-    fixme: also the id of the text should be transmitted back to the persistence, s.t. we can insert a label for the existing text.
     """
     labels = json.loads(request.get_data(as_text=True))
     # registered hostname of service in docker-compose network
@@ -33,15 +30,18 @@ def user_labels():
     )
     print(r.status_code)
     print(r.json())
-    for entry in labels['data']:
-        print(entry)
     return '{}'
 
 
 @app.route('/get_samples')
 def get_samples():
-    # todo: add request parameter to endpoint
-    r = requests.get('http://persistence:{}/texts?n=8'.format(PERSISTENCE_HTTP_PORT))
+    n_texts = request.args.get('n')
+    r = requests.get(
+        'http://persistence:{}/texts?n={}'.format(
+            PERSISTENCE_HTTP_PORT,
+            n_texts
+        )
+    )
     return json.dumps(r.json())
 
 
