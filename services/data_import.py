@@ -74,9 +74,23 @@ def create_manifesto_storage(texts, labels):
     insert_into(DB_FILENAME, texts, labels, 'manifesto')
 
 
+def is_first_run():
+    conn = sqlite3.connect(DB_FILENAME)
+    c = conn.cursor()
+    n_texts = c.execute("SELECT count(1) FROM labels WHERE source = 'manifesto'").fetchone()
+    conn.commit()
+    conn.close()
+    return n_texts[0] == 0
+
+
 if __name__ == "__main__":
-    api_key = os.environ.get('WZB_API_KEY')
-    loader = ManifestoDataLoader(api_key)
-    text, code = loader.get_manifesto_texts()
-    create_manifesto_storage(text, code)
+    should_do_first_time_import = is_first_run()
+    if should_do_first_time_import:
+        print('Importing manifesto for the first time')
+        api_key = os.environ.get('WZB_API_KEY')
+        loader = ManifestoDataLoader(api_key)
+        text, code = loader.get_manifesto_texts()
+        create_manifesto_storage(text, code)
+    else:
+        print('Skipping first time manifesto import')
 
