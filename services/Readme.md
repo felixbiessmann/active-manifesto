@@ -8,7 +8,8 @@ sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 ```
 
-To build and run all of the images from the `docker-compose.yml`, run: `docker-compose up`.
+To startup all services, simply `$ ./run.sh`. This command will setup the initial
+database and run all containers, defined in `docker-compose.yml`.
 
 When the containers have started, visit `http://localhost:8080` for the UI.
 Once the persistence container has started it's web api you can request samples

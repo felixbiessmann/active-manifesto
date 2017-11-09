@@ -2,11 +2,8 @@
 import json
 import os
 import sqlite3
-import urllib.parse
 
 from flask import Flask, jsonify, request
-from manifesto_data import ManifestoDataLoader
-
 
 app = Flask(__name__)
 
@@ -173,12 +170,6 @@ def create_manifesto_storage(texts, labels):
 
 
 if __name__ == "__main__":
-    api_key = os.environ.get("WZB_API_KEY")
-
-    loader = ManifestoDataLoader(api_key)
-    texts, codes = loader.get_manifesto_texts()
-    create_manifesto_storage(texts, codes)
-
     port = int(os.environ.get("HTTP_PORT"))
     app.run(
         host='0.0.0.0',
