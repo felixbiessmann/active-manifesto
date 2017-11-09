@@ -27,7 +27,7 @@ def texts_and_labels():
     """
     stores the POST-body texts and labels.
 
-    expe                                                                                                                                                                                                            cts a POST-body in the format:
+    expects a POST-body in the format:
     {
         "data": [
             {"text": "...", "label": "left"},
