@@ -18,6 +18,21 @@ and submit user labels.
 
 ## build and test single containers
 
+### manifesto model
+
+trigger training with
+
+```
+curl -XPOST -H 'Content-Type: application/json' "localhost:5000/train" -d '{"data": [{"label": "left", "text": "meh meh"}, {"label": "right", "text": "3"}, {"label": "right", "text": "3"}, {"label": "right", "text": "3"}, {"label": "right", "text": "3"}, {"label": "left", "text": "3"}, {"label": "left", "text": "3"}, {"label": "left", "text": "3"}, {"label": "left", "text": "3"}]}'
+```
+
+get ordering of texts
+
+```
+curl -XPOST -H 'Content-Type: application/json' "localhost:5000/estimate_uncertainty" -d '{"data": [{"text_id": 1, "text": "meh meh"}, {"text_id": 2, "text": "3"}]}'
+```
+
+
 ### manifesto data container
 
 add wzb manifesto api key in `persistence/Dockerfile` to environment variable.

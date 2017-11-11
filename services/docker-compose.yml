@@ -25,3 +25,14 @@ services:
     volumes:
       # mount development files to app
       - ./user_interface:/app
+
+  manifesto_model:
+    build: manifesto_model
+    ports:
+     - "0.0.0.0:5000:5000"
+    environment:
+      - PYTHONUNBUFFERED=0 # unbuffered I/O with print etc. to always print to the console
+      - HTTP_PORT=5000
+    volumes:
+      # mount development files to app
+      - ./manifesto_model:/app
