@@ -2,6 +2,7 @@
 
 sudo docker rmi services_user_interface -f
 sudo docker rmi services_persistence -f
+sudo docker rmi services_manifesto_model -f
 sudo docker container prune
 
 echo ""
