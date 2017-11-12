@@ -39,9 +39,9 @@ def model_selection(X,y):
         warnings.simplefilter("ignore")
         # TODO: pipeline parameters (hashing vectorizer dimensionalities etc.) should also be searchable here
         text_clf = SGDClassifier(loss="log")
-        parameters = {'alpha': (np.logspace(-6,-4,5)).tolist()}
+        parameters = {'alpha': (np.logspace(-6,-3,6)).tolist()}
         # perform gridsearch to get the best regularizer
-        gs_clf = GridSearchCV(text_clf, parameters, cv=2, n_jobs=-1,verbose=4)
+        gs_clf = GridSearchCV(text_clf, parameters, cv=2, n_jobs=-1,verbose=1)
         gs_clf.fit(X, y)
         report(gs_clf.cv_results_)
     return gs_clf.best_estimator_
@@ -94,8 +94,8 @@ def compute_active_learning_curve(
     y_tolabel,
     X_validation,
     y_validation,
-    percentage_samples=[1,2,5,10,15,30,50,100],
-    strategies = ['margin_sampling']):
+    percentage_samples=[1,2,5,10,15,30,50,75,100],
+    strategies = ["uncertainty_sampling", "entropy_sampling", 'margin_sampling']):
     '''
     Emulate active learning with annotators:
     for a given training, test and validation set, get the validation error by
@@ -105,7 +105,7 @@ def compute_active_learning_curve(
     the increase in scores with the respective sampling policy
     '''
     print('Computing active learning curve:')
-    clf_trained = SGDClassifier(loss="log").fit(X_tolabel, y_tolabel)
+    clf_trained = model_selection(X_tolabel, y_tolabel)
     baseline_high = accuracy_score(y_validation, clf_trained.predict(X_validation))
     print('\tBaseline on 100% of data {}'.format(baseline_high))
 
@@ -117,7 +117,7 @@ def compute_active_learning_curve(
         n_samples = int((percentage/100.) * X_tolabel.shape[0])
         X_labelled = X_tolabel[random_priorities[:n_samples],:]
         y_labelled = y_tolabel[random_priorities[:n_samples]]
-        clf_current = SGDClassifier(loss="log").fit(X_labelled, y_labelled)
+        clf_current = model_selection(X_labelled, y_labelled)
         current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
         learning_curves.append(
                 {
@@ -139,7 +139,7 @@ def compute_active_learning_curve(
             labelled += priorities[:n_training_samples]
             X_labelled = X_tolabel[labelled,:]
             y_labelled = y_tolabel[labelled]
-            clf_current = SGDClassifier(loss="log").fit(X_labelled, y_labelled)
+            clf_current = model_selection(X_labelled, y_labelled)
 
             # get the not yet labeled data point indices
             to_label = list(all_indices - set(labelled))
@@ -163,17 +163,17 @@ def compute_active_learning_curve(
     return pd.DataFrame(learning_curves)
 
 def run_experiment(
-        validation_percentage = 0.3,
-        n_reps=50,
-        percentage_samples=[1,10,20,30,40,50,100],
+        validation_percentage = 0.1,
+        n_reps=100,
+        percentage_samples=[1,10,20,30,40,50,60,70,80,90,100],
         output_filename=EXPERIMENT_RESULT_FILENAME):
     '''
     Runs a multilabel classification experiment
     '''
     print("Loading data")
-    X_all, y_all = load_data(left_right = False)
+    X_all, y_all = load_data(left_right = True)
     print("Validation set size {}% (n={})".format(validation_percentage, int(len(y_all) * validation_percentage)))
-    label_pool_percentage = 1- validation_percentage
+    label_pool_percentage = 1 - validation_percentage
     print("Label pool {}% (n={})".format(label_pool_percentage,int(len(y_all) * label_pool_percentage)))
     labels = np.unique(y_all)
     results = {}
@@ -187,11 +187,11 @@ def run_experiment(
         learning_curve = compute_active_learning_curve(
                 X_tolabel, y_tolabel,
                 X_validation, y_validation,
-                percentage_samples=percentage_samples)
+                percentage_samples=sp.unique(percentage_samples))
         learning_curve['repetition'] = irep
         learning_curves.append(learning_curve)
 
-    results = pd.concat(learning_curves).to_csv(output_filename, index = False)
+    pd.concat(learning_curves).to_csv(output_filename)
 
 def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
     import seaborn, pylab
