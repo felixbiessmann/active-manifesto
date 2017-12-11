@@ -6,9 +6,9 @@ import scipy as sp
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import SGDClassifier
-from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.feature_extraction.text import HashingVectorizer, CountVectorizer
 from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score
+from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from scipy.special import logit
 
@@ -18,6 +18,11 @@ label2rightleft = {
     }
 
 EXPERIMENT_RESULT_FILENAME = "active_learning_curves.csv"
+
+def print_classification_report(true,pred,fn='report.txt'):
+    s = classfication_report(true,pred) + \
+        "\n\n" + "\n".join([",".join(l) for l in confusion_matrix(true,pred)])
+    open(fn).write(s)
 
 def report(results, n_top=3):
     for i in range(1, n_top + 1):
@@ -45,6 +50,31 @@ def model_selection(X,y):
         gs_clf.fit(X, y)
         report(gs_clf.cv_results_)
     return gs_clf.best_estimator_
+
+def load_data_bow(folder = "../data/manifesto",
+        min_label_count = 1000,
+        left_right = False,
+        max_words = int(1e6)
+        ):
+    df = pd.concat([pd.read_csv(fn) for fn in glob.glob(os.path.join(folder,"*.csv"))]).dropna(subset=['cmp_code','content'])
+    df = df.sample(frac=1.0)
+    if left_right:
+        # replace_with = ['left', 'right', 'neutral']
+        replace_with = [-1, 1, 0]
+        label_to_replace = [
+            label2rightleft['left'],
+            label2rightleft['right'],
+            list(set(df.cmp_code.unique()) - set(label2rightleft['left'] + label2rightleft['right']))
+            ]
+
+        for rep, label in zip(replace_with, label_to_replace):
+            df.cmp_code.replace(label, rep, inplace = True)
+
+    label_hist = df.cmp_code.value_counts()
+    valid_labels = label_hist[label_hist > min_label_count].index
+    df = df[df.cmp_code.isin(valid_labels)]
+    vect = CountVectorizer(max_features=max_words,binary=True).fit(df.content.values)
+    return vect.transform(df.content.values), df.cmp_code.apply(int).as_matrix(), vect.vocabulary_, df.content.values, vect
 
 def load_data(folder = "../data/manifesto",
         min_label_count = 1000,
@@ -161,6 +191,56 @@ def compute_active_learning_curve(
 
 
     return pd.DataFrame(learning_curves)
+
+
+
+def run_explanations_experiment(validation_percentage = 0.1, top=5):
+    def rem_words(row):
+        for w in row['rel_words_pos']:
+            row['newtexts'] = row['newtexts'].lower().replace(w,"")
+        return row
+    X_all, y_all, vocab, texts, vect = load_data_bow(left_right = True)
+    idx2word = {v:k for k,v in vocab.items()}
+    X_train, X_test, y_train, y_test = train_test_split(X_all, y_all, test_size=validation_percentage,shuffle=False)
+    clf = model_selection(X_train, y_train)
+    y_pred = clf.predict_proba(X_test)
+    y_test_bin = np.zeros((len(y_test),len(clf.classes_)))
+    for idx,y_test_i in enumerate(y_test):
+        y_test_bin[idx,y_test_i] = 1
+    errors = y_test_bin - y_pred
+    errors[:,1] = 0
+    gradient = errors.dot(clf.coef_)
+    # rel_words = gradient.argsort(axis=1)
+    rel_words_neg = [[idx2word[widx] for widx in t.argsort()[:top]] for n,t in enumerate(gradient)]
+    rel_words_pos = [[idx2word[widx] for widx in t.argsort()[-top:][::-1]] for n,t in enumerate(gradient)]
+    df = pd.DataFrame({
+        'true':y_test,
+        'pred':clf.predict(X_test),
+        'texts':texts[-len(y_test):],
+        'rel_words_pos':rel_words_pos,
+        'rel_words_neg':rel_words_neg
+        })
+
+    df['newtexts'] = df['texts']
+    df = df.apply(rem_words,axis=1)
+    df['newtexts'] = df['newtexts'] + df['rel_words_neg'].apply(lambda x: " ".join(x))
+
+    df['new_predictions'] = clf.predict(vect.transform(df.newtexts.tolist()))
+    # relevances_pos = []
+    # relevances_neg = []
+    # for c in clf.classes_.tolist():
+    #     relevance = X_test[y_pred==c,:].multiply(clf.coef_[clf.classes_.tolist().index(c),:]).tocsr()
+    #     rel_words = relevance.toarray().argsort(axis=1)
+    #
+    #     rel_words_neg = [[idx2word[widx] for widx in t if widx in relevance[n,:].nonzero()[1]] for n,t in enumerate(rel_words[:,:top])]
+    #     rel_words_pos = [[idx2word[widx] for widx in t if widx in relevance[n,:].nonzero()[1]] for n,t in enumerate(rel_words[:,-top:][:,::-1])]
+    #     relevances_pos.append(pd.Series(rel_words_pos,df.index[y_pred==c]))
+    #     relevances_neg.append(pd.Series(rel_words_neg,df.index[y_pred==c]))
+    # rel_neg = pd.concat(relevances_neg)
+    # rel_pos = pd.concat(relevances_pos)
+    # df = df.assign(rel_words_neg=rel_neg).assign(rel_words_pos=rel_pos)
+
+    return df[['true','pred','new_predictions','rel_words_pos','rel_words_neg','texts','newtexts']]
 
 def run_experiment(
         validation_percentage = 0.1,
