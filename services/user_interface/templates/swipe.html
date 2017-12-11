@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Active Manifesto</title>
+
+    <meta name="description" content="Source code generated using layoutit.com">
+    <meta name="author" content="LayoutIt!">
+
+    <script
+            src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.touchSwipe.min.js') }}"></script>
+
+</head>
+<script>
+        function makeHttpObject() {
+          try {return new XMLHttpRequest();}
+          catch (error) {}
+          try {return new ActiveXObject("Msxml2.XMLHTTP");}
+          catch (error) {}
+          try {return new ActiveXObject("Microsoft.XMLHTTP");}
+          catch (error) {}
+          throw new Error("Could not create HTTP request object.");
+        }
+
+        function get_samples() {
+            var request = makeHttpObject();
+            request.open("GET", "/get_samples?n=3", false);
+            request.send(null);
+            return JSON.parse(request.responseText)['data'];
+        }
+
+        $(function() {
+          var maxSwipes=3;
+          var swipeCount=0;
+          var started=false;
+
+          var sessionSamples = get_samples();
+
+          function msg(direction) {
+            if(swipeCount > 0 && swipeCount <= maxSwipes) {
+              sessionSamples[swipeCount - 1]['label'] = direction;
+            }
+
+            if(swipeCount >= maxSwipes) {
+              $("#political_samples_box").html("Thank you for participating in this evaluation. To start again, tap!");
+              started = false;
+              console.log(sessionSamples);
+            } else {
+              $("#political_samples_box").html(sessionSamples[swipeCount]['statement']);
+            }
+          }
+
+          $("#swipe").swipe( {
+            tap:function(event, target) {
+              if(!started) {
+                sessionSamples = get_samples();
+                swipeCount = 0;
+                started = true;
+                msg();
+              }
+            },
+            swipe:function(event, direction, distance, duration, fingerCount, fingerData) {
+              if(started) {
+                swipeCount++;
+                msg(direction);
+              }
+            },
+            threshold:50
+          });
+        });
+
+    </script>
+
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="text-center">
+                Active Manifesto
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <h2>
+                Political Samples
+            </h2>
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="swipe" style="height: 250px; width: 350px; background-color: rgba(0,0,0,0.1);">
+                        <div id="political_samples_box">
+                            To begin bias estimation, tap this area once.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

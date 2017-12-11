@@ -34,15 +34,36 @@ def user_labels():
 
 
 @app.route('/get_samples')
-def get_samples():
+def get_samples(mock=True):
     n_texts = request.args.get('n')
-    r = requests.get(
-        'http://persistence:{}/texts?n={}'.format(
-            PERSISTENCE_HTTP_PORT,
-            n_texts
+    if not mock:
+        r = requests.get(
+            'http://persistence:{}/texts?n={}'.format(
+                PERSISTENCE_HTTP_PORT,
+                n_texts
+            )
         )
+        return json.dumps(r.json())
+    else:
+        import time
+        t = str(int(time.time()))
+        return json.dumps(
+            {
+                'data': [
+                    {'text_id': 1, 'statement': 'A ' + t},
+                    {'text_id': 2, 'statement': 'B ' + t},
+                    {'text_id': 3, 'statement': 'C ' + t},
+                ]
+            }
+        )
+
+
+@app.route('/swipe')
+def swipe():
+    return render_template(
+        'swipe.html',
+        persistence_host='http://0.0.0.0:'+str(PERSISTENCE_HTTP_PORT)
     )
-    return json.dumps(r.json())
 
 
 @app.route('/')
