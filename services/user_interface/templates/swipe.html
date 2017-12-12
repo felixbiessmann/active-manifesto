@@ -53,10 +53,6 @@
           var sessionSamples = get_samples();
 
           function msg(direction) {
-            if(swipeCount > 0 && swipeCount <= maxSwipes) {
-              sessionSamples[swipeCount - 1]['label'] = direction;
-            }
-
             if(swipeCount >= maxSwipes) {
               $("#political_samples_box").html("Thank you for participating in this evaluation. To start again, tap!");
               started = false;
@@ -64,6 +60,10 @@
             } else {
               $("#political_samples_box").html(sessionSamples[swipeCount]['statement']);
             }
+          }
+
+          function tag_current_statement(direction) {
+            sessionSamples[swipeCount]['label'] = direction;
           }
 
           $("#swipe").swipe( {
@@ -77,6 +77,7 @@
             },
             swipe:function(event, direction, distance, duration, fingerCount, fingerData) {
               if(started) {
+                tag_current_statement(direction);
                 swipeCount++;
                 msg(direction);
               }
