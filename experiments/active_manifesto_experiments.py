@@ -17,7 +17,7 @@ label2rightleft = {
     'left': [103,105,106,107,403,404,406,412,413,504,506,701,202]
     }
 
-EXPERIMENT_RESULT_FILENAME = "active_learning_curves.csv"
+EXPERIMENT_RESULT_FILENAME = "active_learning_curves_50_reps_margin.csv"
 
 def print_classification_report(true,pred,fn='report.txt'):
     s = classfication_report(true,pred) + \
@@ -48,7 +48,7 @@ def model_selection(X,y):
         # perform gridsearch to get the best regularizer
         gs_clf = GridSearchCV(text_clf, parameters, cv=2, n_jobs=-1,verbose=1)
         gs_clf.fit(X, y)
-        report(gs_clf.cv_results_)
+        # report(gs_clf.cv_results_)
     return gs_clf.best_estimator_
 
 def load_data_bow(folder = "../data/manifesto",
@@ -226,19 +226,6 @@ def run_explanations_experiment(validation_percentage = 0.1, top=5):
     df['newtexts'] = df['newtexts'] + df['rel_words_neg'].apply(lambda x: " ".join(x))
 
     df['new_predictions'] = clf.predict(vect.transform(df.newtexts.tolist()))
-    # relevances_pos = []
-    # relevances_neg = []
-    # for c in clf.classes_.tolist():
-    #     relevance = X_test[y_pred==c,:].multiply(clf.coef_[clf.classes_.tolist().index(c),:]).tocsr()
-    #     rel_words = relevance.toarray().argsort(axis=1)
-    #
-    #     rel_words_neg = [[idx2word[widx] for widx in t if widx in relevance[n,:].nonzero()[1]] for n,t in enumerate(rel_words[:,:top])]
-    #     rel_words_pos = [[idx2word[widx] for widx in t if widx in relevance[n,:].nonzero()[1]] for n,t in enumerate(rel_words[:,-top:][:,::-1])]
-    #     relevances_pos.append(pd.Series(rel_words_pos,df.index[y_pred==c]))
-    #     relevances_neg.append(pd.Series(rel_words_neg,df.index[y_pred==c]))
-    # rel_neg = pd.concat(relevances_neg)
-    # rel_pos = pd.concat(relevances_pos)
-    # df = df.assign(rel_words_neg=rel_neg).assign(rel_words_pos=rel_pos)
 
     return df[['true','pred','new_predictions','rel_words_pos','rel_words_neg','texts','newtexts']]
 
@@ -251,7 +238,7 @@ def run_experiment(
     Runs a multilabel classification experiment
     '''
     print("Loading data")
-    X_all, y_all = load_data(left_right = True)
+    X_all, y_all = load_data(left_right = False)
     print("Validation set size {}% (n={})".format(validation_percentage, int(len(y_all) * validation_percentage)))
     label_pool_percentage = 1 - validation_percentage
     print("Label pool {}% (n={})".format(label_pool_percentage,int(len(y_all) * label_pool_percentage)))
@@ -273,6 +260,17 @@ def run_experiment(
 
     pd.concat(learning_curves).to_csv(output_filename)
 
+def run_baseline(validation_percentage = 0.5):
+    '''
+    Runs experiment on all data and prints classification report
+    '''
+    print("Loading data")
+    X_all, y_all = load_data(left_right = False)
+    X_train, X_test, y_train, y_test = train_test_split(X_all, y_all, test_size=validation_percentage)
+    clf = model_selection(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    print(classification_report(y_test,y_pred))
+
 def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
     import seaborn, pylab
     df = pd.read_csv(fn)
@@ -288,6 +286,18 @@ def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
         data=df)
     pylab.title('prioritization strategy performances (95% CI shown)')
     pylab.savefig('../manuscript/images/active_learning_manifesto.pdf')
+
+def plot_label_histogram(folder = "../data/manifesto"):
+    manifesto_labels = pd.read_csv(os.path.join(folder,"manifestolabels.txt"),sep=" ",names=['cmp_code','label'])
+    manifesto_labels['cmp_code'] = manifesto_labels.cmp_code.apply(lambda x: int(x[3:]))
+    df = pd.concat([pd.read_csv(fn) for fn in glob.glob(os.path.join(folder,"*.csv"))]).dropna(subset=['cmp_code','content'])
+    counts = df.cmp_code.value_counts()
+    count_df = manifesto_labels.join(counts,on='cmp_code',how='inner',lsuffix="_l").sort_values(by='cmp_code',ascending=False)
+    count_df.columns = ['cmp_code', 'label', 'counts']
+
+    print(count_df[count_df.counts>1000].to_latex(index=False))
+
+
 
 if __name__ == "__main__":
     run_experiment()
