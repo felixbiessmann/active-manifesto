@@ -37,6 +37,8 @@
 \newcommand{\keywords}[1]{\par\addvspace\baselineskip
 \noindent\keywordname\enspace\ignorespaces#1}
 \usepackage{booktabs}
+\usepackage{color}
+\newcommand{\felix}[1]{\textcolor{blue}{#1}}
 
 \begin{document}
 
@@ -55,8 +57,8 @@
 % the running heads and the author index.
 %
 \author{
-%Felix Biessmann\thanks{felix.biessmann@gmail.com},~ 
-%Philipp Schmidt\thanks{schmidtiphil@gmail.com}, ~ 
+Felix Biessmann\thanks{felix.biessmann@gmail.com},~ 
+Philipp Schmidt\thanks{schmidtiphil@gmail.com}
 %Andreas Grafberger\thanks{}
 }
 %
@@ -93,6 +95,7 @@ In this study we leverage this insight, known in the ML community as active lear
 \section{Introduction}
 \label{sec:intro}
 %
+\felix{Some motivation and a gentle intro to active learning will go here.}
 
 \section{Related Work}\label{sec:related}
 Throughout the last years automated content analyses for political texts have been conducted on a variety of text data sources (parliament data \, blogs, tweets, news articles, party manifestos) with a variety of methods, including sentiment analysis, stylistic analyses, standard bag-of-word (BOW) text feature classifiers and more advanced natural language processing tools. For an overview we refer the reader to \cite{Grimmer2013,Kaal2014}. 
@@ -153,7 +156,7 @@ Bag-of-words feature vectors were used to train a multinomial logistic regressio
 p(y=k|\vec{x},\vec{W}) = &\frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}} \qquad \textrm{with }  z_k=&\vec{w}_k^{\top}\vec{x} \\\nonumber
 \end{eqnarray}
 %
-We estimated $\vec{W}$ using quasi-newton gradient descent. The optimization function was obtained by adding a penalization term to the negative log-likelihood of the multinomial logistic regression objective and the optimization hence found the $\vec{W}$ that minimized
+We estimated $\vec{W}$ using stochastic gradient descent with 5 epochs through the training data set. The optimization function was obtained by adding a penalization term to the negative log-likelihood of the multinomial logistic regression objective and the optimization hence found the $\vec{W}$ that minimized
 \begin{equation}\label{eq:objective}
 L(\vec{W}, \vec{x}, \gamma) = - \log{\frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}}}+ \gamma \| \vec{W} \|_{F}
 \end{equation}
@@ -242,13 +245,16 @@ Example results for a baseline model trained on half the available training data
 
 \subsection{Active Learning Results}
 \label{sec:active_learning_results}
-Basically: it works, see also \autoref{fig:active_learning_curves}.
+We ran 100 offline experiments on all data for all active learning strategies and plot the median and 5th/95th percentile of the accuracies obtained with the respective model trained on a given fraction of the training data in \autoref{fig:active_learning_curves}. The results demonstrate that active learning clearly achieves superior performance compared to random sampling. In the large majority of cases, active learning resulted in a model that was indistinguishable from the best model that could have been obtained when training on all available training data with less than 80\% of the total training data. Random sampling, the baseline strategy, required 100\% of the training data in order to achieve the same performance. 
+
+We did not observe in our experiments a clear distinction between the different active learning strategies. This could be related to the fact that we discarded rare labels, which led to a rather small amount of classes. Hence the differences between the active learning strategies and their respective advantages for a large number of labels did not help as much as they would have with more labels and an even more skewed label distribution. 
+
 \begin{figure}
 \begin{center}
-\includegraphics[width=0.9\textwidth]{images/active_learning_manifesto.pdf} 
+\includegraphics[width=\textwidth]{images/active_learning_manifesto.pdf} 
 %
 \end{center}
-\caption{
+\caption{Comparison of active learning strategies, see \autoref{sec:active_learning_strategies}, with random baseline (blue), shown are the median and the 5th/95th percentile across 100 repetitions. While there are no distinct differences between the active learning strategies, all active learning strategies are significantly superior to randomly sampling from the pool of unlabelled data points. 
 \label{fig:active_learning_curves}
 }
 \end{figure}
@@ -259,7 +265,7 @@ Our offline experiments show that active learning can be useful for speeding up 
 As we deliberately restricted the complexity of the model class to a linear classifier and simple unigram bag of words features, it is very likely that the best performing model can be improved. This does not affect the conclusion that active learning can speed up the annotation process. Our restrictions were made deliberately and merely to speed up experiments.
 
 \subsection*{Acknowledgements}
-
+We thank Giovanni Zappella for helpful feedback on active learning matters. We thank Jirka Lewandowski and Pola Lehmann for helpful discussions on data, modelling and support when using the public Manifesto API.
 %
 \small{
 \bibliographystyle{plain}
