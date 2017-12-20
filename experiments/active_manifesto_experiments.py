@@ -6,9 +6,9 @@ import scipy as sp
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import SGDClassifier
-from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.feature_extraction.text import HashingVectorizer, CountVectorizer
 from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score
+from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from scipy.special import logit
 
@@ -17,7 +17,12 @@ label2rightleft = {
     'left': [103,105,106,107,403,404,406,412,413,504,506,701,202]
     }
 
-EXPERIMENT_RESULT_FILENAME = "active_learning_curves.csv"
+EXPERIMENT_RESULT_FILENAME = "active_learning_curves_50_reps_margin.csv"
+
+def print_classification_report(true,pred,fn='report.txt'):
+    s = classfication_report(true,pred) + \
+        "\n\n" + "\n".join([",".join(l) for l in confusion_matrix(true,pred)])
+    open(fn).write(s)
 
 def report(results, n_top=3):
     for i in range(1, n_top + 1):
@@ -43,8 +48,33 @@ def model_selection(X,y):
         # perform gridsearch to get the best regularizer
         gs_clf = GridSearchCV(text_clf, parameters, cv=2, n_jobs=-1,verbose=1)
         gs_clf.fit(X, y)
-        report(gs_clf.cv_results_)
+        # report(gs_clf.cv_results_)
     return gs_clf.best_estimator_
+
+def load_data_bow(folder = "../data/manifesto",
+        min_label_count = 1000,
+        left_right = False,
+        max_words = int(1e6)
+        ):
+    df = pd.concat([pd.read_csv(fn) for fn in glob.glob(os.path.join(folder,"*.csv"))]).dropna(subset=['cmp_code','content'])
+    df = df.sample(frac=1.0)
+    if left_right:
+        # replace_with = ['left', 'right', 'neutral']
+        replace_with = [-1, 1, 0]
+        label_to_replace = [
+            label2rightleft['left'],
+            label2rightleft['right'],
+            list(set(df.cmp_code.unique()) - set(label2rightleft['left'] + label2rightleft['right']))
+            ]
+
+        for rep, label in zip(replace_with, label_to_replace):
+            df.cmp_code.replace(label, rep, inplace = True)
+
+    label_hist = df.cmp_code.value_counts()
+    valid_labels = label_hist[label_hist > min_label_count].index
+    df = df[df.cmp_code.isin(valid_labels)]
+    vect = CountVectorizer(max_features=max_words,binary=True).fit(df.content.values)
+    return vect.transform(df.content.values), df.cmp_code.apply(int).as_matrix(), vect.vocabulary_, df.content.values, vect
 
 def load_data(folder = "../data/manifesto",
         min_label_count = 1000,
@@ -162,6 +192,43 @@ def compute_active_learning_curve(
 
     return pd.DataFrame(learning_curves)
 
+
+
+def run_explanations_experiment(validation_percentage = 0.1, top=5):
+    def rem_words(row):
+        for w in row['rel_words_pos']:
+            row['newtexts'] = row['newtexts'].lower().replace(w,"")
+        return row
+    X_all, y_all, vocab, texts, vect = load_data_bow(left_right = True)
+    idx2word = {v:k for k,v in vocab.items()}
+    X_train, X_test, y_train, y_test = train_test_split(X_all, y_all, test_size=validation_percentage,shuffle=False)
+    clf = model_selection(X_train, y_train)
+    y_pred = clf.predict_proba(X_test)
+    y_test_bin = np.zeros((len(y_test),len(clf.classes_)))
+    for idx,y_test_i in enumerate(y_test):
+        y_test_bin[idx,y_test_i] = 1
+    errors = y_test_bin - y_pred
+    errors[:,1] = 0
+    gradient = errors.dot(clf.coef_)
+    # rel_words = gradient.argsort(axis=1)
+    rel_words_neg = [[idx2word[widx] for widx in t.argsort()[:top]] for n,t in enumerate(gradient)]
+    rel_words_pos = [[idx2word[widx] for widx in t.argsort()[-top:][::-1]] for n,t in enumerate(gradient)]
+    df = pd.DataFrame({
+        'true':y_test,
+        'pred':clf.predict(X_test),
+        'texts':texts[-len(y_test):],
+        'rel_words_pos':rel_words_pos,
+        'rel_words_neg':rel_words_neg
+        })
+
+    df['newtexts'] = df['texts']
+    df = df.apply(rem_words,axis=1)
+    df['newtexts'] = df['newtexts'] + df['rel_words_neg'].apply(lambda x: " ".join(x))
+
+    df['new_predictions'] = clf.predict(vect.transform(df.newtexts.tolist()))
+
+    return df[['true','pred','new_predictions','rel_words_pos','rel_words_neg','texts','newtexts']]
+
 def run_experiment(
         validation_percentage = 0.1,
         n_reps=100,
@@ -171,7 +238,7 @@ def run_experiment(
     Runs a multilabel classification experiment
     '''
     print("Loading data")
-    X_all, y_all = load_data(left_right = True)
+    X_all, y_all = load_data(left_right = False)
     print("Validation set size {}% (n={})".format(validation_percentage, int(len(y_all) * validation_percentage)))
     label_pool_percentage = 1 - validation_percentage
     print("Label pool {}% (n={})".format(label_pool_percentage,int(len(y_all) * label_pool_percentage)))
@@ -193,21 +260,51 @@ def run_experiment(
 
     pd.concat(learning_curves).to_csv(output_filename)
 
+def run_baseline(validation_percentage = 0.5):
+    '''
+    Runs experiment on all data and prints classification report
+    '''
+    print("Loading data")
+    X_all, y_all = load_data(left_right = False)
+    X_train, X_test, y_train, y_test = train_test_split(X_all, y_all, test_size=validation_percentage)
+    clf = model_selection(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    print(classification_report(y_test,y_pred).replace("     ",'&').replace('\n','\\\\\n'))
+
 def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
     import seaborn, pylab
+
     df = pd.read_csv(fn)
-    pylab.figure()
+    pylab.figure(figsize=(12,6))
+    seaborn.set(font_scale=2)
     seaborn.tsplot(
         time="percentage_samples",
         value="score",
         condition="strategy",
         unit="repetition",
         err_style="ci_bars",
-        ci=95,
-        lw=1,
-        data=df)
-    pylab.title('prioritization strategy performances (95% CI shown)')
+        ci=[.05,95],
+        lw=2,
+        data=df, estimator=np.median)
+    pylab.title('Active Sampling Strategy Comparison')
+    pylab.xlim([19,101])
+    pylab.ylim([0.39,0.54])
+    pylab.ylabel("Accuracy")
+    pylab.xlabel("Labeling budget (% of total training data)")
+    pylab.tight_layout()
     pylab.savefig('../manuscript/images/active_learning_manifesto.pdf')
+
+def plot_label_histogram(folder = "../data/manifesto"):
+    manifesto_labels = pd.read_csv(os.path.join(folder,"manifestolabels.txt"),sep=" ",names=['cmp_code','label'])
+    manifesto_labels['cmp_code'] = manifesto_labels.cmp_code.apply(lambda x: int(x[3:]))
+    df = pd.concat([pd.read_csv(fn) for fn in glob.glob(os.path.join(folder,"*.csv"))]).dropna(subset=['cmp_code','content'])
+    counts = df.cmp_code.value_counts()
+    count_df = manifesto_labels.join(counts,on='cmp_code',how='inner',lsuffix="_l").sort_values(by='cmp_code',ascending=False)
+    count_df.columns = ['cmp_code', 'label', 'counts']
+
+    print(count_df[count_df.counts>1000].to_latex(index=False))
+
+
 
 if __name__ == "__main__":
     run_experiment()

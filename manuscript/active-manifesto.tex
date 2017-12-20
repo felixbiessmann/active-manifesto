@@ -36,6 +36,9 @@
 \urldef{\mailsa}\path|{felix.biessmann,|
 \newcommand{\keywords}[1]{\par\addvspace\baselineskip
 \noindent\keywordname\enspace\ignorespaces#1}
+\usepackage{booktabs}
+\usepackage{color}
+\newcommand{\felix}[1]{\textcolor{blue}{#1}}
 
 \begin{document}
 
@@ -54,8 +57,8 @@
 % the running heads and the author index.
 %
 \author{
-%Felix Biessmann\thanks{felix.biessmann@gmail.com},~ 
-%Philipp Schmidt\thanks{schmidtiphil@gmail.com}, ~ 
+Felix Biessmann\thanks{felix.biessmann@gmail.com},~ 
+Philipp Schmidt\thanks{schmidtiphil@gmail.com}
 %Andreas Grafberger\thanks{}
 }
 %
@@ -92,71 +95,181 @@ In this study we leverage this insight, known in the ML community as active lear
 \section{Introduction}
 \label{sec:intro}
 %
+\felix{Some motivation and a gentle intro to active learning will go here.}
+
+\section{Related Work}\label{sec:related}
+Throughout the last years automated content analyses for political texts have been conducted on a variety of text data sources (parliament data \, blogs, tweets, news articles, party manifestos) with a variety of methods, including sentiment analysis, stylistic analyses, standard bag-of-word (BOW) text feature classifiers and more advanced natural language processing tools. For an overview we refer the reader to \cite{Grimmer2013,Kaal2014}. 
+
+The work closest related to this study is using machine learning classification models to identify political affiliation or bias on political speeches or manifesto data. In \cite{Yu2008} the authors extracted BOW feature vectors and applied linear classifiers to predict political party affiliation of US congress speeches. Similar work in \cite{Hirst2014} uses data from the Canadian parliament and the European parliament. 
+Other work has focused on developing largely unsupervised for predicting political bias. Two popular methods are WordFish \cite{Slapin08ascaling} and WordScores \cite{Laver2003}, or improved versions thereof, see e.g. \cite{Lowe09scalingpolicy}. These approaches have been very valuable for {\em a posteriori} analysis of historical data but they do not seem to be used as much for analyses of new data in a predictive analytics setting. 
+
+Taken together, there is a large body of literature on automated analysis of political texts. Except for few exceptions most previous work has focused on binary classification or on assignment of a one dimensional policy position (often corresponding to left vs right). Data sets such as the manifesto project allow for more fine grained analyses of political bias. Models trained on such data can give valuable insights in political texts in a predictive setting see e.g. \cite{Merz2016,Biessmann16}. While data set as the manifesto project allow to train classifiers that can give more detailed insight into political bias, they also impose a significant effort on the annotators. 
+
+The scope of the manifesto project limits the to be annotated texts to a feasible amount, 'just' the party manifestos. But one can imagine scenarios in which not all data can be fully annotated. One such scenario could be a tight deadline for an analysis right before elections: parties release their programs only shortly before the elections and often these texts are too long to read by one single person before the elections \cite{merz2017}. In addition to relying on experts to interpret these programs, it can be helpful to use models trained on previously annotated data to assess the policies proposed in the party programs. This can help to get a better overview of the policies especially when new parties enter the political stage, see e.g. \cite{bronline}. 
+Another scenario in which the labelling budget is limited is if one wants to annotate texts from online media. It can be important in many settings to have an expert view on the political bias of a text. But high volume of content published by online media does not allow for an expert analysis of all texts. In this context, automated text analysis with models trained on the manifesto project data can be helpful. In an ideal scenario one could use a model to automatically label texts for which the model is relatively certain to be correct and only send data to annotation by human experts when the model is uncertain. This idea is the basis of the active learning scenario we are considering in this work. 
+
+\section{Data Sets and Feature Extraction}\label{sec:data}
+%
+
+\subsection{Data}
+Annotated political text data was obtained from all manifesto texts of parties in Germany made available through the Manifesto Project \cite{manifesto}. 
+Each sentence or in some cases also parts of a sentences is annotated with one of 56 political labels. Examples of these labels are {\em pro/contra protectionism, decentralism, centralism, pro/contra welfare}; for a complete list and detailed explanations on how the annotators were instructed see \cite{leftright}. In total this resulted in 48148 political statements. In order to obtain training data that would lead to reliable predictions in the experiments we discarded categories that had less than 1000 observed labels, which resulted in the 17 labels listed in \autoref{tab:valid_labels}.
+
+\begin{table}
+\centering
+\label{tab:valid_labels} 
+
+\begin{tabular}{rlr}
+\toprule
+ cmp\_code &                   label &  counts \\
+\midrule
+      503 &        social justice + &    4086 \\
+      411 &        infrastructure + &    3085 \\
+      501 &      environmentalism + &    2775 \\
+      303 &  gov-admin efficiency + &    2580 \\
+      403 &     market regulation + &    2513 \\
+      504 &               welfare + &    2418 \\
+      201 &  freedom/human rights + &    2410 \\
+      701 &                labour + &    2199 \\
+      506 &             education + &    2064 \\
+      202 &             democracy + &    1918 \\
+      305 &   political authority + &    1590 \\
+      107 &      internationalism + &    1574 \\
+      408 &          economic goals &    1298 \\
+      706 &   non economic groups + &    1224 \\
+      606 &        social harmony + &    1137 \\
+      502 &               culture + &    1130 \\
+      605 &         law and order + &    1117 \\
+\bottomrule
+\end{tabular}
+\caption{List of valid labels and Manifesto Project Codes above 1000 counts.}
+\end{table}
+
+The reason we needed to discard the less frequent labels was merely because in the experiments we subsampled the data heavily in order to simulate cases in which only very few sentences could be labeled. This required us to discard rare labels as those are very likely to not be observed at all when subsampling only around 10\% of the data. 
+
+\subsection{Bag-of-Words Vectorization}\label{sec:bow-vectorization}
+Strings of each semantic unit (quasi sentence) were tokenised and transformed into bag-of-word vectors as implemented in scikit-learn \cite{scikit-learn}. We used the standard \href{http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.HashingVectorizer.html}{HashingVectorizer}. The text of each semantic unit is transformed into a vector $\vec{x}\in\mathds{R}^d$ where $d=10^18$ is the size of the dictionary (here: number of hash buckets); the $w$th entry of $\vec{x}$ contains the count of the $w$th feature. In previous experiments we have tried several options for vectorizing the texts, including term-frequency-inverse-document-frequency normalisation, n-gram patterns up to size $n=3$, several cutoffs for discarding too frequent and too infrequent words and also most standard natural language processing procedures such as stemming or lemmatization, for some of these experiments we refer to \cite{Biessmann16}. These experiments showed that rather modest preprocessing, lowercasing and bigrams, resulted in best generalization performance. Hence in the current experiments we only used lower casing and unigram features, which were only slightly worse than bigrams. 
+
+\section{Classification Model and Training Procedure}\label{sec:model}
+Bag-of-words feature vectors were used to train a multinomial logistic regression model. Let $y\in\{1,2,\dots,K\}$ be the true  label, where $K$ is the total number of labels and $\vec{W}=[\vec{w}_1,\dots,\vec{w}_K]\in\R^{d\times K}$ is the concatenation of the weight vectors $\vec{w}_k$ associated with the $k$th party then 
+\begin{eqnarray}\label{eq:logreg_multiclass}
+p(y=k|\vec{x},\vec{W}) = &\frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}} \qquad \textrm{with }  z_k=&\vec{w}_k^{\top}\vec{x} \\\nonumber
+\end{eqnarray}
+%
+We estimated $\vec{W}$ using stochastic gradient descent with 5 epochs through the training data set. The optimization function was obtained by adding a penalization term to the negative log-likelihood of the multinomial logistic regression objective and the optimization hence found the $\vec{W}$ that minimized
+\begin{equation}\label{eq:objective}
+L(\vec{W}, \vec{x}, \gamma) = - \log{\frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}}}+ \gamma \| \vec{W} \|_{F}
+\end{equation}
+Where $\|~\|_F$ denotes the Frobenius Norm and $\gamma$ is a regularization parameter controlling the complexity of the model. 
+The regularization parameter was optimized on a log-scaled grid from $10^{-4,\dots,4}$. The performance of the model was optimized using the negative log likelihood, but we also report all other standard measures for each class, in particular 
+
+\begin{itemize}
+\item Accuracy $\frac{\text{correct classifications}}{\# samples}$
+\item Precision $\frac{TP} {FP + TP}$
+\item Recall $\frac{TP}{TP + FN}$
+\item F1 score $2\times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$
+\end{itemize}
+
+where \textit{TP} and \textit{FP} stands for true positives and false positives, respectively.
+
+
+\subsection{Model Selection and Evaluation}\label{sec:crossvalidation}
+For model evaluation we kept 10\% of the entire training data separate in all experiments. For model selection, or hyper parameter optimization we only considered the regularization parameter as described in \autoref{sec:model}. All other hyper parameters related to preprocessing the data were kept fixed based on previous experiments reported in \cite{Biessmann16}. This restriction was made to speed up the experiments, as each training run involved hyper parameter optimization, which comes at a significant computational cost. All hyperparameters were optimized using 2-fold cross validation on the training set. 
+
+\subsection{Active Learning Strategies}\label{sec:active_learning_strategies}
+We employed three different active learning strategies which we will briefly outline below, for a detailed review on the topic and various strategies we refer to \cite{2012Settles}. 
+
+\paragraph{Random Baseline} In order to simulate the standard procedure for sampling that does not take into account the uncertainty of the classifier we used random sampling from the pool of to-be-labeled examples. 
+
+\paragraph{Uncertainty Sampling}
+Uncertainty sampling queries samples $\vec{x}_i$ for which a classifier's top prediction is least confident
+\begin{align}\label{eq:uncertainty_sampling}
+\vec{x}_i = \argmax_{i,k} \left(1- p(y=k|\vec{x}_i,\vec{W})\right)
+\end{align}
+This strategy only takes into account the top prediction and hence could loose information from less likely classes, according to the model. 
+
+\paragraph{Entropy Sampling}
+Entropy sampling queries samples $\vec{x}_i$ for which a classifier's prediction for all classes is least confident
+\begin{align}\label{eq:entropy_sampling}
+\vec{x}_i = \argmax_{i} \sum_k p(y=k|\vec{x}_i,\vec{W}) \log(p(y=k|\vec{x}_i,\vec{W}))
+\end{align}
+This variant takes into account predictions for all classes and intuitively speaking might pick up too much information from noisy predictions for unlikely classes. 
+
+\paragraph{Margin Sampling}
+Margin sampling queries samples $\vec{x}_i$ for which a classifier's prediction for the top two predicted classes is minimal
+\begin{align}\label{eq:entropy_sampling}
+\vec{x}_i = \argmin_{i} \left(p(y=k_1|\vec{x}_i,\vec{W}) - p(y=k_1|\vec{x}_i,\vec{W}) \right)
+\end{align}
+where $k_1,~k_2$ are the classes that are most likely and second most likely, respectively, under the current model. 
+This variant is a compromise between the uncertainty sampling and the entropy sampling strategy.
+
+\subsection{Offline Experiment Setting}
+We used the above active learning strategies to simulate a scenario in which a limited budget of labelling resources is available and the task is to train a model as best as possible on this labelling budget. The model performance was measured on a separate held out test data set. The best performance of a given model class was measured by performing model selection and training on all of the training data and testing on the test set. The active learning strategies were then compared by performing model selection and training on only a fraction of the training data, in particular 1\%, 10\%, 20\%, \dots, 100\%. For each subsampling of the data we performed all four sampling strategies. Sampling was performed using the last model on all samples that were not yet labeled and the newly sampled data points were joined with the already sampled data points. This setting allowed to estimate with which fraction of the entire training data each respective strategy yielded the best model, relative to the model trained on all training data. In order to obtain robust results we ran each experiment 100 times, meaning 100 times training and testing using each sampling strategy for each of the considered fractions of the training data. 
 
 \section{Results}
-\label{sec:results}
-Basically: it works, see also \autoref{fig:active_learning_curves}.
+
+We first report some results of a model that was trained on the entire training data, in order to illustrate the performance of the best performing model under the given model class. This will the bar against the active learning experiments will be compared. Afterwards we present the results of the active learning experiments in which we compare the strategies listed in \autoref{sec:active_learning_strategies} with a random baseline. 
+
+\subsection{Baseline Model}\label{sec:results_baseline}
+Example results for a baseline model trained on half the available training data is shown in \autoref{tab:baseline_model_report}. On average an F1 score of 0.48 was obtained with a simple linear logistic regression model and unigram features. This is comparable to results previously obtained on the complete set of manifesto codes and a model trained with exhaustive model selection on all relevant model and preprocessing hyperparameters. Also the result is comparable with the accuracy obtained in previous similar experiments performed on the same data \cite{Merz2016}.
+\begin{table}
+\centering
+\begin{tabular}{cccccc}
+\toprule
+&  manifesto code & precision  &  recall&  f1-score &  support\\
+\midrule
+&   107&  0.60& 0.48& 0.53&  774\\
+&   201&  0.51& 0.55& 0.53& 1194\\
+&   202&  0.63& 0.57& 0.60&  983\\
+&   303&  0.35& 0.41& 0.38& 1251\\
+&   305&  0.46& 0.59& 0.52&  783\\
+&   403&  0.52& 0.48& 0.50& 1281\\
+&   408&  0.34& 0.17& 0.23&  628\\
+&   411&  0.39& 0.60& 0.47& 1535\\
+&   501&  0.61& 0.55& 0.58& 1380\\
+&   502&  0.65& 0.41& 0.50&  587\\
+&   503&  0.46& 0.52& 0.49& 2083\\
+&   504&  0.34& 0.56& 0.43& 1179\\
+&   506&  0.63& 0.48& 0.54& 1026\\
+&   605&  0.56& 0.44& 0.49&  576\\
+&   606&  0.63& 0.27& 0.38&  561\\
+&   701&  0.59& 0.39& 0.47& 1123\\
+&   706&  0.45& 0.26& 0.33&  615\\
+\bottomrule
+& avg / total&  0.50& 0.48& 0.48&17559\\
+\end{tabular}
+\caption{Precision, recall, F1 score and number of instances per class. }
+\label{tab:baseline_model_report} 
+\end{table}
+
+
+\subsection{Active Learning Results}
+\label{sec:active_learning_results}
+We ran 100 offline experiments on all data for all active learning strategies and plot the median and 5th/95th percentile of the accuracies obtained with the respective model trained on a given fraction of the training data in \autoref{fig:active_learning_curves}. The results demonstrate that active learning clearly achieves superior performance compared to random sampling. In the large majority of cases, active learning resulted in a model that was indistinguishable from the best model that could have been obtained when training on all available training data with less than 80\% of the total training data. Random sampling, the baseline strategy, required 100\% of the training data in order to achieve the same performance. 
+
+We did not observe in our experiments a clear distinction between the different active learning strategies. This could be related to the fact that we discarded rare labels, which led to a rather small amount of classes. Hence the differences between the active learning strategies and their respective advantages for a large number of labels did not help as much as they would have with more labels and an even more skewed label distribution. 
+
 \begin{figure}
 \begin{center}
-\includegraphics[width=0.9\textwidth]{images/active_learning_manifesto.pdf} 
+\includegraphics[width=\textwidth]{images/active_learning_manifesto.pdf} 
 %
 \end{center}
-\caption{
+\caption{Comparison of active learning strategies, see \autoref{sec:active_learning_strategies}, with random baseline (blue), shown are the median and the 5th/95th percentile across 100 repetitions. While there are no distinct differences between the active learning strategies, all active learning strategies are significantly superior to randomly sampling from the pool of unlabelled data points. 
 \label{fig:active_learning_curves}
 }
 \end{figure}
 
+\section{Conclusion}
+Our offline experiments show that active learning can be useful for speeding up annotation of political texts. The results of this study demonstrate that when using active learning can yield models that are as accurate as the best model, meaning a model trained on all available training data, with less than XX\% of the entire training data in 95\% of the experiments. Random sampling in contrast achieves only the best performance when trained on XX\% of the data. This highlights the potential of using information of the model uncertainty when deciding which samples to annotate next when the annotation budget is limited.
 
-%\section{Data Sets and Feature Extraction}\label{sec:data}
-%%
-%
-%\subsection{Data}
-%Annotated political text data was obtained from two sources: a) the discussions and speeches held in the german parliament ({\em Bundestag}) and b) all manifesto texts of parties running for election in the german parliament in the current 18th and the last, 17th, legislation period.
-%
-%\paragraph{Parliament discussion data} Parliament texts are annotated with the respective party label, which we take here as a proxy for political bias. The texts of parliament protocols are available through the website of the german bundestag\footnote{\url{https://www.bundestag.de/protokolle}}; an open source API was used to query the data in a cleaned and structured format\footnote{\url{https://github.com/bundestag}}. In total 22784 speeches were extracted for the 17th legislative period and 11317 speeches for the 18th period, queried until March 2016. 
-%
-%\paragraph{Party manifesto data}
-%For party manifestos another openly accessible API was used, provided by the Wissenschaftszentrum Berlin (WZB). The API is released as part of the {\em Manifestoproject} \cite{manifesto}. The data released in this project comprises the complete manifestos for each party that ran for election enriched with annotations by political experts. Each sentence (in some cases also parts of sentences) is annotated with one of 56 political labels. Examples of these labels are {\em pro/contra protectionism, decentralism, centralism, pro/contra welfare}; for a complete list and detailed explanations on how the annotators were instructed see \cite{leftright}. The set of labels was developed by political scientists at the WZB and released for public use. All manifestos of parties that were running for election in this and the last legislative period were obtained. In total this resulted in 29451 political statements that had two types of labels: First the party affiliation of each political statement; this label was used to evaluate the party evaluation classifiers trained on the parliament speeches. For this purpose the data acquisition was constrained to only those parties that were elected into the parliament. Next to the party affiliation the political view labels were extracted. For the analyses based on political view labels all parties were considered, also those that did not make it into the parliament. 
-%
-%The length of each annotated statement in the party manifestos was rather short. The longest statement was 522 characters long, the 25\%/50\%/75\% percentiles were 63/95/135 characters. Measured in words the longest data point was 65 words and the 25\%/50\%/75\% percentiles were 8/12/17 words, respectively. This can be considered as a very valuable property of the data set, because it allows a fine grained resolution of party manifestos. However for a classifier (as well as for humans) such short sentences can be rather difficult to classify. In order to obtain less 'noisy' data points from each party -- for the party affiliation task only -- all statements were aggregated into political topics using the manifesto code labels. Each political view label is a three digit code, the first digit represents the political domain. In total there were eight political domains (topics): {\em External Relations, Freedom and Democracy, Political System, Economy, Welfare and Quality of Life, Fabric of Society, Social Groups} and a topic {\em undefined}, for a complete list see also \cite{leftright}. These 8 topics were used to aggregate all statements in each manifesto into topics. Most party manifestos covered all eight of them, some party manifestos in the 17th Bundestag only covered seven. 
-%
-%\subsection{Bag-of-Words Vectorization}\label{sec:bow-vectorization}
-%First each data set was segmented into semantic units; in the case of parliament discussions this were the speeches, in the case of the party manifesto data semantic units were the sentences or sentence parts associated with one of the 56 political view labels.  Parliament speeches were often interrupted; in this case each uninterrupted part of a speech was considered a semantic unit. Strings of each semantic unit were tokenised and transformed into bag-of-word vectors as implemented in scikit-learn \cite{scikit-learn}. The general idea of bag-of-words vectors is to simply count occurrences of words (or word sequences, also called {\em n-grams}) for each data point. A data point is usually a document, here it is the semantic units of parliament speeches and manifesto sentences, respectively. The text of each semantic unit is transformed into a vector $\vec{x}\in\mathds{R}^d$ where $d$ is the size of the dictionary; the $w$th entry of $\vec{x}$ contains the (normalized) count of the $w$th word (or sequence of words) in our dictionary. Several options for vectorizing the speeches were tried, including term-frequency-inverse-document-frequency normalisation, n-gram patterns up to size $n=3$ and several cutoffs for discarding too frequent and too infrequent words. All of these hyperparameters were subjected to hyperparameter optimization as explained in \autoref{sec:crossvalidation}. 
-%
-%
-%\section{Classification Model and Training Procedure}\label{sec:model}
-%Bag-of-words feature vectors were used to train a multinomial logistic regression model. Let $y\in\{1,2,\dots,K\}$ be the true  label, where $K$ is the total number of labels and $\vec{W}=[\vec{w}_1,\dots,\vec{w}_K]\in\R^{d\times K}$ is the concatenation of the weight vectors $\vec{w}_k$ associated with the $k$th party then 
-%\begin{eqnarray}\label{eq:logreg_multiclass}
-%p(y=k|\vec{x},\vec{W}) = &\frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}} \qquad \textrm{with }  z_k=&\vec{w}_k^{\top}\vec{x} \\\nonumber
-%\end{eqnarray}
-%%
-%We estimated $\vec{W}$ using quasi-newton gradient descent. The optimization function was obtained by adding a penalization term to the negative log-likelihood of the multinomial logistic regression objective and the optimization hence found the $\vec{W}$ that minimized
-%\begin{equation}\label{eq:objective}
-%L(\vec{W}, \vec{x}, \gamma) = - \log{\frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}}}+ \gamma \| \vec{W} \|_{F}
-%\end{equation}
-%Where $\|~\|_F$ denotes the Frobenius Norm and $\gamma$ is a regularization parameter controlling the complexity of the model. 
-%The regularization parameter was optimized on a log-scaled grid from $10^{-4,\dots,4}$. The performance of the model was optimized using the classification accuracy, but we also report all other standard measures, precision ($TP / (FP + TP$), recall ($TP / (TP + FN)$) and f1-score ($2\times (Prec. \times Rec) / (Prec + Rec.)$). \\
-%
-%Three different classification problems were considered: 
-%\begin{enumerate}
-%\item {\bf Classification of party affiliation} (five class / four class problem)
-%\item {\bf Classification of government membership} (binary problem)
-%\item {\bf Classification of political views} (56 class problem)
-%\end{enumerate}
-%
-%Party affiliation is a five class problem for the 17th legislation period, and a four class problem for the 18th legislation period. Political view classification is based on the labels of the manifesto project, see \autoref{sec:data} and \cite{leftright}. 
-%For each of first two problems, party affiliation and government membership prediction, classifiers were trained on the parliament speeches. For the third problem classifiers were trained only on the manifesto data for which political view labels were available. 
-%
-%\subsection{Optimisation of Model Parameters}\label{sec:crossvalidation}
-%The model pipeline contained a number of  hyperparameters that were optimised using cross-validation.  
-%We first split the training data into a training data set that was used for optimisation of hyperparameters and an held-out test data set for evaluating how well the model performs on in-domain data; wherever possible the generalisation performance of the models was also evaluated on out-of domain data. Hyperparameters were optimised using grid search and 3-fold cross-validation within the training set only: A cross-validation split was made to obtain train/test data for the grid search and for each setting of hyperparameters the entire pipeline was trained and evaluated -- no data from the in-domain evaluation data or the out-of-domain evaluation data were used for hyperparameter optimisation. For the best setting of all hyperparameters the pipeline was trained again on all training data and evaluated on the evaluation data sets. For party affiliation prediction and government membership prediction the training and test set were 90\% and 10\%, respectively, of all data in a given legislative period. Out-of-domain evaluation data were the texts from party manifestos. For the political view prediction setting there was no out-of-domain evaluation data, so all labeled manifesto sentences in both legislative periods were split into a training and evaluation set of 90\% (train) and 10\% (evaluation). 
+As we deliberately restricted the complexity of the model class to a linear classifier and simple unigram bag of words features, it is very likely that the best performing model can be improved. This does not affect the conclusion that active learning can speed up the annotation process. Our restrictions were made deliberately and merely to speed up experiments.
 
 \subsection*{Acknowledgements}
-
+We thank Giovanni Zappella for helpful feedback on active learning matters. We thank Jirka Lewandowski and Pola Lehmann for helpful discussions on data, modelling and support when using the public Manifesto API.
 %
 \small{
 \bibliographystyle{plain}
-\bibliography{political_bias_prediction} 
+\bibliography{active-manifesto} 
 }
 
 

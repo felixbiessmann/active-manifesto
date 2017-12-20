@@ -7,7 +7,7 @@ sudo docker container prune
 
 echo ""
 
-export WZB_API_KEY=""
+export WZB_API_KEY="9cd9104a725f26bcae04da3eed6bdd40"
 #export HOST_DB_PATH="./db/active-manifesto.db"
 #export CONTAINER_DB_PATH="/db/active-manifesto.db"
 
