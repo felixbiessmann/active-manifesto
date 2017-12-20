@@ -10,7 +10,7 @@ class ManifestoDataLoader(object):
     def __init__(self, api_key):
         self.base_url = "https://manifesto-project.wzb.eu/tools"
         self.country = "Germany"
-        self.version = "MPDS2016b"
+        self.version = "MPDS2017b"
         self.api_key = api_key
 
         self.label2rightleft = {
