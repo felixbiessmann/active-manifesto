@@ -36,26 +36,13 @@ def user_labels():
 @app.route('/get_samples')
 def get_samples():
     n_texts = request.args.get('n')
-    # r = requests.get(
-    #     'http://persistence:{}/texts?n={}'.format(
-    #         PERSISTENCE_HTTP_PORT,
-    #         n_texts
-    #     )
-    # )
-    # return json.dumps(r.json())
-    return json.dumps([
-       {
-           "label": "right",
-           "source": "manifesto",
-           "statement": "Der Verlust von Arbeitspl\u00e4tzen, sinkende Einkommen, Massentierhaltung, Lebensmittelskandale und ein undurchdringlicher Subventionsdschungel machen deutlich: Die Wende zu einer zukunftsf\u00e4higen Landwirtschaft ist \u00fcberf\u00e4llig"
-         },
-         {
-           "label": "left",
-           "source": "manifesto",
-           "statement": "J\u00e4hrlich werden in Landwirtschaft und Gartenbau \u00fcber 100|000 Arbeitspl\u00e4tze abgebaut"
-         }
-       ])
-
+    r = requests.get(
+        'http://persistence:{}/texts?n={}'.format(
+            PERSISTENCE_HTTP_PORT,
+            n_texts
+        )
+    )
+    return json.dumps(r.json())
 
 
 @app.route('/')
