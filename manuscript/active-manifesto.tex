@@ -125,7 +125,7 @@ Despite the challenges associated with acquiring annotated data for training aut
 This section describes the data set and preprocessing applied to the Manifesto Project Corpus data, we used the latest version available when running experiments, version 2017b. 
 \subsection{Data}
 Annotated political text data was obtained from all manifesto texts of parties in Germany made available through the Manifesto Project \cite{manifesto}. 
-Each sentence or in some cases also parts of a sentences is annotated with one of 56 political labels. Examples of these labels are {\em pro/contra protectionism, decentralism, centralism, pro/contra welfare}; for a complete list and detailed explanations on how the annotators were instructed see \cite{leftright}. In total this resulted in 48148 political statements. In order to obtain training data that would lead to reliable predictions in the experiments we discarded categories that had less than 1000 observed labels, which resulted in the 17 labels listed in \autoref{tab:valid_labels}.
+Each sentence or in some cases also parts of a sentences is annotated with one of 56 political labels. Examples of these labels are {\em pro/contra protectionism, decentralism, centralism, pro/contra welfare}; for a complete list and detailed explanations on how the annotators were instructed see \cite{leftright}. In total this resulted in 48148 political statements. In order to obtain training data that would lead to reliable predictions in the experiments we discarded categories that had less than 1000 observed labels, which resulted in the 17 labels listed in \autoref{tab:valid_labels} and reduced the data set to 35,118 samples, or 73\% of the original data set.
 
 \begin{table}
 \centering
