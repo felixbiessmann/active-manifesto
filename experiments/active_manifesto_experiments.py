@@ -269,22 +269,29 @@ def run_baseline(validation_percentage = 0.5):
     X_train, X_test, y_train, y_test = train_test_split(X_all, y_all, test_size=validation_percentage)
     clf = model_selection(X_train, y_train)
     y_pred = clf.predict(X_test)
-    print(classification_report(y_test,y_pred))
+    print(classification_report(y_test,y_pred).replace("     ",'&').replace('\n','\\\\\n'))
 
 def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
     import seaborn, pylab
+
     df = pd.read_csv(fn)
-    pylab.figure()
+    pylab.figure(figsize=(12,6))
+    seaborn.set(font_scale=2)
     seaborn.tsplot(
         time="percentage_samples",
         value="score",
         condition="strategy",
         unit="repetition",
         err_style="ci_bars",
-        ci=95,
-        lw=1,
-        data=df)
-    pylab.title('prioritization strategy performances (95% CI shown)')
+        ci=[.05,95],
+        lw=2,
+        data=df, estimator=np.median)
+    pylab.title('Active Sampling Strategy Comparison')
+    pylab.xlim([19,101])
+    pylab.ylim([0.39,0.54])
+    pylab.ylabel("Accuracy")
+    pylab.xlabel("Labeling budget (% of total training data)")
+    pylab.tight_layout()
     pylab.savefig('../manuscript/images/active_learning_manifesto.pdf')
 
 def plot_label_histogram(folder = "../data/manifesto"):
