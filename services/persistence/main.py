@@ -22,12 +22,13 @@ def index():
 @app.route("/texts_and_labels", methods=['POST'])
 def texts_and_labels():
     """
-    stores the POST-body texts and labels.
+    Stores labels for the specified text ids.
 
     expects a POST-body in the format:
     {
         "data": [
             {"text_id": 17342, "label": "left"},
+            {"text_id": 873, "label": "neutral"},
             ...
         ]
     }

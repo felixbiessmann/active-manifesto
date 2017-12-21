@@ -34,7 +34,7 @@ def user_labels():
 
 
 @app.route('/get_samples')
-def get_samples(mock=True):
+def get_samples(mock=False):
     n_texts = request.args.get('n')
     if not mock:
         r = requests.get(
