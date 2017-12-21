@@ -34,7 +34,6 @@ def training_texts():
         ]
     }
     """
-    # todo: use this endpoint from manifesto model
     texts = get_texts_with_majority_voted_labels(1000000)
     texts = list(map(lambda entry: {'text': entry['statement'], 'label': entry['label']}, texts))
     return jsonify({'data': texts}), 200
@@ -60,19 +59,6 @@ def texts_and_labels():
 
     insert_into(DB_FILENAME, text_ids, labels, 'user')
     n_inserts = len(texts_with_labels)
-
-    # fixme: queue up examples and don't train on every user submission, or contact persistence with manifesto model with scheduler
-    training_data = {
-        'data': list(map(lambda entry: {'text': entry['statement'], 'label': entry['label']}, get_texts_with_majority_voted_labels(1000000)))
-    }
-    url = 'http://manifesto_model:{}/train'.format(MANIFESTO_MODEL_HTTP_PORT)
-    print('sending data to manifesto model for training...')
-    r = requests.post(
-        url=url,
-        json=training_data
-    )
-    print(r.status_code)
-    print(r.json())
 
     return jsonify({'n_inserted': n_inserts}), 201
 

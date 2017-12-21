@@ -38,7 +38,7 @@ def get_samples(mock=False):
     n_texts = request.args.get('n')
     if not mock:
         r = requests.get(
-            'http://persistence:{}/texts?n={}'.format(
+            'http://persistence:{}/prioritized_texts?n={}'.format(
                 PERSISTENCE_HTTP_PORT,
                 n_texts
             )
