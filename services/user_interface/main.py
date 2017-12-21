@@ -34,28 +34,15 @@ def user_labels():
 
 
 @app.route('/get_samples')
-def get_samples(mock=False):
+def get_samples():
     n_texts = request.args.get('n')
-    if not mock:
-        r = requests.get(
-            'http://persistence:{}/prioritized_texts?n={}'.format(
-                PERSISTENCE_HTTP_PORT,
-                n_texts
-            )
+    r = requests.get(
+        'http://persistence:{}/prioritized_texts?n={}'.format(
+            PERSISTENCE_HTTP_PORT,
+            n_texts
         )
-        return json.dumps(r.json())
-    else:
-        import time
-        t = str(int(time.time()))
-        return json.dumps(
-            {
-                'data': [
-                    {'text_id': 1, 'statement': 'A ' + t},
-                    {'text_id': 2, 'statement': 'B ' + t},
-                    {'text_id': 3, 'statement': 'C ' + t},
-                ]
-            }
-        )
+    )
+    return json.dumps(r.json())
 
 
 @app.route('/swipe')

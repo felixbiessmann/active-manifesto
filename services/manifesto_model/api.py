@@ -24,7 +24,7 @@ def retrain():
     print('retrain called')
 
     url = 'http://persistence:{}/training_texts'.format(PERSISTENCE_HTTP_PORT)
-    print('sending data to manifesto model for training...')
+    print('requesting training data from persistence...')
     r = requests.get(url=url)
     print(r.status_code)
 
@@ -70,16 +70,13 @@ def estimate_uncertainty():
     }
     """
     request_data = json.loads(request.get_data(as_text=True))['data']
-    # print('estimate_uncertainty', request_data)
     texts = list(map(lambda entry: entry['text'], request_data))
     text_ids = list(map(lambda entry: entry['text_id'], request_data))
 
     prios_texts = classifier.prioritize(texts)
-    # print('prios texts', prios_texts)
 
     text_ids_priotized = np.array(text_ids)[np.array(prios_texts)]
     response_data = [{"text_id": int(tid)} for tid in text_ids_priotized]
-    # print('priotized text ids', response_data)
     return jsonify({"data": response_data})
 
 

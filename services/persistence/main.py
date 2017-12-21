@@ -91,7 +91,6 @@ def prioritized_texts():
     )
     priotized_text_ids = list(map(lambda e: int(e['text_id']), r.json()['data'][:n_texts]))
     priotized_texts = get_texts_with_ids(priotized_text_ids)
-    # print('priotized texts', list(map(lambda e: e['text_id'], priotized_texts)))
 
     text_data = {'data': priotized_texts}
     return jsonify(text_data)
@@ -126,7 +125,6 @@ def get_texts_with_ids(ids):
     :param ids:
     :return:
     """
-    print('ids in get texts with ids', ids)
     conn = sqlite3.connect(DB_FILENAME)
     c = conn.cursor()
     return [
