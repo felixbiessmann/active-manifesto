@@ -23,6 +23,23 @@ def index():
     return jsonify({})
 
 
+@app.route("/training_texts", methods=['GET'])
+def training_texts():
+    """
+    Endpoint that returns the current state of the training data.
+    :return: {
+        'data': [
+            {],
+            ...
+        ]
+    }
+    """
+    # todo: use this endpoint from manifesto model
+    texts = get_texts_with_majority_voted_labels(1000000)
+    texts = list(map(lambda entry: {'text': entry['statement'], 'label': entry['label']}, texts))
+    return jsonify({'data': texts}), 200
+
+
 @app.route("/texts_and_labels", methods=['POST'])
 def texts_and_labels():
     """
@@ -60,11 +77,11 @@ def texts_and_labels():
     return jsonify({'n_inserted': n_inserts}), 201
 
 
-@app.route("/texts", methods=['GET'])
-def texts():
+@app.route("/prioritized_texts", methods=['GET'])
+def prioritized_texts():
     """
     Retrieves all of the political statements from the database, sends them to the manifesto model to be prioritized
-    and returns at most as many texts given in the GET parameter `n`.
+    and returns at most as many texts given in the GET parameter `n`, ordered by their uncertainty.
 
     :return: {
         'data': [
@@ -74,7 +91,7 @@ def texts():
     }
     """
     n_texts = int(request.args.get('n'))
-    texts = get_texts_with_majority_voted_labels(1000000)
+    texts = get_texts_only(1000000)
 
     samples = {
         'data': list(map(lambda entry: {'text_id': entry['text_id'], 'text': entry['statement']}, texts))
@@ -140,6 +157,35 @@ def get_texts_with_ids(ids):
             ids
         )
     ]
+
+
+def get_texts_only(n_texts):
+    """
+    return the text data only without labels, at most `n_texts`.
+
+    :param n_texts: how many texts to retrieve, integer.
+    :return: majority voted labels per text: [
+        {'text_id': 1, 'statement': 'some statement', 'label': 'left'},
+        ...
+    ]
+    """
+    conn = sqlite3.connect(DB_FILENAME)
+    c = conn.cursor()
+    results = [
+        {
+            'text_id': text_id,
+            'statement': statement
+        } for text_id, statement in c.execute(
+            """
+            SELECT
+                t.id text_id,
+                t.statement
+            FROM texts t
+            LIMIT ?""",
+            (n_texts, )
+        )
+    ]
+    return results
 
 
 def get_texts_with_majority_voted_labels(n_texts):
