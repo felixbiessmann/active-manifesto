@@ -46,7 +46,7 @@ def texts_and_labels():
 
     # fixme: queue up examples and don't train on every user submission, or contact persistence with manifesto model with scheduler
     training_data = {
-        'data': list(map(lambda entry: {'text': entry['statement'], 'label': entry['label']}, get_texts(1000000)))
+        'data': list(map(lambda entry: {'text': entry['statement'], 'label': entry['label']}, get_texts_with_majority_voted_labels(1000000)))
     }
     url = 'http://manifesto_model:{}/train'.format(MANIFESTO_MODEL_HTTP_PORT)
     print('sending data to manifesto model for training...')
@@ -63,19 +63,18 @@ def texts_and_labels():
 @app.route("/texts", methods=['GET'])
 def texts():
     """
-    returns json object like
+    Retrieves all of the political statements from the database, sends them to the manifesto model to be prioritized
+    and returns at most as many texts given in the GET parameter `n`.
 
-    {
+    :return: {
         'data': [
             {'text_id': 1, 'label': 'left'},
             ...
         ]
     }
-    :return:
     """
-    # todo: fetch most uncertain texts (select, query model, send n back)
     n_texts = int(request.args.get('n'))
-    texts = get_texts(1000000)
+    texts = get_texts_with_majority_voted_labels(1000000)
 
     samples = {
         'data': list(map(lambda entry: {'text_id': entry['text_id'], 'text': entry['statement']}, texts))
@@ -89,7 +88,7 @@ def texts():
     )
     priotized_text_ids = list(map(lambda e: int(e['text_id']), r.json()['data'][:n_texts]))
     priotized_texts = get_texts_with_ids(priotized_text_ids)
-    print('priotized texts', list(map(lambda e: e['text_id'], priotized_texts)))
+    # print('priotized texts', list(map(lambda e: e['text_id'], priotized_texts)))
 
     text_data = {'data': priotized_texts}
     return jsonify(text_data)
@@ -143,36 +142,44 @@ def get_texts_with_ids(ids):
     ]
 
 
-def get_texts(n_texts):
+def get_texts_with_majority_voted_labels(n_texts):
     """
-    return at most `n_texts` from the underlying storage.
+    return at most `n_texts` from the underlying storage, accounting for multiple labels per text.
+    label with most votes wins, in break even situations a random label is chosen.
+
     :param n_texts: how many texts to retrieve, integer.
+    :return: majority voted labels per text: [
+        {'text_id': 1, 'statement': 'some statement', 'label': 'left'},
+        ...
+    ]
     """
-    # fixme: 1:n relation of texts to labels, need to implement some kind of majority voting for the labels
     conn = sqlite3.connect(DB_FILENAME)
     c = conn.cursor()
-    return [
+    results = [
         {
             'text_id': text_id,
             'statement': statement,
-            'label': label,
-            'source': source
-        } for text_id, statement, label, source, _, _ in c.execute(
+            'labels': labels
+        } for text_id, statement, labels in c.execute(
             """
             SELECT
                 t.id text_id,
                 t.statement,
-                l.label,
-                l.source,
-                t.created_at,
-                l.created_at
+                GROUP_CONCAT(l.label) labels
             FROM texts t
             INNER JOIN labels l ON l.texts_id = t.id
-            -- ORDER BY RANDOM()
+            GROUP BY t.id, t.statement
             LIMIT ?""",
             (n_texts, )
         )
     ]
+    results = list(
+        map(
+            lambda r: {'text_id': r['text_id'], 'statement': r['statement'], 'label': max(set(r['labels'].split(',')), key=r['labels'].count)},
+            results
+        )
+    )
+    return results
 
 
 if __name__ == "__main__":

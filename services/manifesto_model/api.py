@@ -44,7 +44,7 @@ def train():
     request_data = json.loads(request.get_data(as_text=True))['data']
     texts = list(map(lambda entry: entry['text'], request_data))
     labels = list(map(lambda entry: entry['label'], request_data))
-
+    print('training on', len(texts), 'samples')
     classifier.train(texts, labels)
 
     return jsonify({}), 201
@@ -82,7 +82,7 @@ def estimate_uncertainty():
 
     text_ids_priotized = np.array(text_ids)[np.array(prios_texts)]
     response_data = [{"text_id": int(tid)} for tid in text_ids_priotized]
-    print('priotized text ids', response_data)
+    # print('priotized text ids', response_data)
     return jsonify({"data": response_data})
 
 
