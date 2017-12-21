@@ -27,6 +27,10 @@ class Classifier:
 
         """
         self.clf = None
+        try:
+            self.clf = joblib.load('classifier.pickle')
+        except:
+            pass
 
     @staticmethod
     def smooth_probas(label_probas, eps=1e-9):

@@ -9,7 +9,7 @@ import json
 
 app = Flask(__name__)
 
-DEBUG = os.environ.get('DEBUG') != None
+DEBUG = True  # os.environ.get('DEBUG') != None
 VERSION = 0.1
 
 
@@ -22,7 +22,6 @@ def retrain():
     return Classifier(train=True)
 
 
-### API
 @app.route("/predict", methods=['POST'])
 def predict():
     text = request.form['text']
@@ -52,7 +51,7 @@ def train():
 
 
 @app.route("/estimate_uncertainty", methods=['POST'])
-def get_samples():
+def estimate_uncertainty():
     """
     estimates text uncertainties.
 
@@ -74,18 +73,20 @@ def get_samples():
     }
     """
     request_data = json.loads(request.get_data(as_text=True))['data']
+    # print('estimate_uncertainty', request_data)
     texts = list(map(lambda entry: entry['text'], request_data))
     text_ids = list(map(lambda entry: entry['text_id'], request_data))
 
     prios_texts = classifier.prioritize(texts)
+    # print('prios texts', prios_texts)
 
     text_ids_priotized = np.array(text_ids)[np.array(prios_texts)]
     response_data = [{"text_id": int(tid)} for tid in text_ids_priotized]
+    print('priotized text ids', response_data)
     return jsonify({"data": response_data})
 
 
 if __name__ == "__main__":
-    # port = int(os.environ.get('HTTP_PORT'))
     port = int(os.environ.get('HTTP_PORT'))
     classifier = Classifier(train=False)
     app.run(host='0.0.0.0', port=port, debug=DEBUG)
