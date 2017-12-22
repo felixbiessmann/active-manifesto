@@ -1,58 +1,54 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import flask
-from flask import Flask, request, jsonify
-import os
-from classifier import Classifier
-# from apscheduler.schedulers.background import BackgroundScheduler
 import json
+import os
+
+import numpy as np
+import requests
+from apscheduler.schedulers.background import BackgroundScheduler
+from flask import Flask, request, jsonify
+
+from classifier import Classifier
 
 app = Flask(__name__)
 
-DEBUG = os.environ.get('DEBUG') != None
+DEBUG = True  # os.environ.get('DEBUG') != None
 VERSION = 0.1
 
+PERSISTENCE_HTTP_PORT = int(os.environ.get('PERSISTENCE_HTTP_PORT'))
 
-# Schedules news reader to be run at 00:00
-# scheduler = BackgroundScheduler()
-# scheduler.add_job(retrain, 'interval', minutes=360)
-# scheduler.start()
 
 def retrain():
-    return Classifier(train=True)
+    """
+    Fetches latest training data from persistence service and retrains the manifesto model with it.
+    """
+    print('retrain called')
+
+    url = 'http://persistence:{}/training_texts'.format(PERSISTENCE_HTTP_PORT)
+    print('requesting training data from persistence...')
+    r = requests.get(url=url)
+    print(r.status_code)
+
+    response_data = r.json()['data']
+    texts = list(map(lambda entry: entry['text'], response_data))
+    labels = list(map(lambda entry: entry['label'], response_data))
+
+    print('training on', len(texts), 'samples')
+    classifier.train(texts, labels)
 
 
-### API
+scheduler = BackgroundScheduler()
+scheduler.add_job(retrain, 'interval', minutes=60)
+scheduler.start()
+
+
 @app.route("/predict", methods=['POST'])
 def predict():
     text = request.form['text']
     return jsonify(classifier.predict(text))
 
 
-@app.route("/train", methods=['POST'])
-def train():
-    """
-    trains a classifier.
-
-    expects a POST-body in the format:
-    {
-        "data": [
-            {"text": "some political statement", "label": "left"},
-            ...
-        ]
-    }
-    """
-    request_data = json.loads(request.get_data(as_text=True))['data']
-    texts = list(map(lambda entry: entry['text'], request_data))
-    labels = list(map(lambda entry: entry['label'], request_data))
-
-    classifier.train(texts, labels)
-
-    return jsonify({}), 201
-
-
 @app.route("/estimate_uncertainty", methods=['POST'])
-def get_samples():
+def estimate_uncertainty():
     """
     estimates text uncertainties.
 
@@ -85,7 +81,6 @@ def get_samples():
 
 
 if __name__ == "__main__":
-    # port = int(os.environ.get('HTTP_PORT'))
     port = int(os.environ.get('HTTP_PORT'))
     classifier = Classifier(train=False)
     app.run(host='0.0.0.0', port=port, debug=DEBUG)

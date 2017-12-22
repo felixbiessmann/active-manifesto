@@ -53,10 +53,33 @@
           var sessionSamples = get_samples();
 
           function msg(direction) {
+            // finished labelling round
             if(swipeCount >= maxSwipes) {
               $("#political_samples_box").html("Thank you for participating in this evaluation. To start again, tap!");
               started = false;
+
+              var user_labels = sessionSamples.map(function(sample) {
+                var mapped_label = sample['label'];
+                switch(sample['label']) {
+                  case 'down':
+                    mapped_label = 'neutral';
+                }
+                return {
+                  'label': mapped_label,
+                  'text_id': sample['text_id']
+                };
+              });
+
+              data = {
+                  'data': user_labels
+              };
               console.log(sessionSamples);
+              console.log(data);
+              var request = makeHttpObject();
+              request.open("POST", "/user_labels", false);
+              request.setRequestHeader("Content-Type", "application/json");
+              request.send(JSON.stringify(data));
+
             } else {
               $("#political_samples_box").html(sessionSamples[swipeCount]['statement']);
             }
@@ -76,7 +99,7 @@
               }
             },
             swipe:function(event, direction, distance, duration, fingerCount, fingerData) {
-              if(started) {
+              if(started && (direction == 'down' || direction == 'left' || direction == 'right')) {
                 tag_current_statement(direction);
                 swipeCount++;
                 msg(direction);
@@ -93,15 +116,28 @@
     <div class="row">
         <div class="col-md-12">
             <h1 class="text-center">
-                Active Manifesto
+                Active Manifesto - Political Statement Tagger
             </h1>
         </div>
     </div>
     <div class="row">
         <div class="col-md-12">
             <h2>
-                Political Samples
+                Instructions
             </h2>
+            <div class="row">
+                <div class="col-md-3">
+                To start labelling, please click or tap the gray area.
+                You will be shown a few political statements, for which you decide their political orientation.
+                Depending on the direction you swipe, the currently shown sample will be tagged as:
+                <ul>
+                    <li><b>left</b> - for swiping left</li>
+                    <li><b>right</b> - for swiping right</li>
+                    <li><b>neutral</b> - for swiping down</li>
+                </ul>
+                </div>
+                <div class="col-md-9"></div>
+            </div>
             <div class="row">
                 <div class="col-md-12">
                     <div id="swipe" style="height: 250px; width: 350px; background-color: rgba(0,0,0,0.1);">

@@ -2,6 +2,7 @@
 import json
 import os
 import sqlite3
+import requests
 
 from flask import Flask, jsonify, request
 
@@ -13,21 +14,41 @@ VERSION = 0.1
 DB_FILENAME = os.environ.get('DB_PATH')
 print('Using database', DB_FILENAME)
 
+MANIFESTO_MODEL_HTTP_PORT = os.environ.get('MANIFESTO_MODEL_HTTP_PORT')
+print('contact for manifesto model at port', MANIFESTO_MODEL_HTTP_PORT)
+
 
 @app.route("/", methods=['POST'])
 def index():
     return jsonify({})
 
 
+@app.route("/training_texts", methods=['GET'])
+def training_texts():
+    """
+    Endpoint that returns the current state of the training data.
+    :return: {
+        'data': [
+            {],
+            ...
+        ]
+    }
+    """
+    texts = get_texts_with_majority_voted_labels(1000000)
+    texts = list(map(lambda entry: {'text': entry['statement'], 'label': entry['label']}, texts))
+    return jsonify({'data': texts}), 200
+
+
 @app.route("/texts_and_labels", methods=['POST'])
 def texts_and_labels():
     """
-    stores the POST-body texts and labels.
+    Stores labels for the specified text ids.
 
     expects a POST-body in the format:
     {
         "data": [
             {"text_id": 17342, "label": "left"},
+            {"text_id": 873, "label": "neutral"},
             ...
         ]
     }
@@ -42,10 +63,36 @@ def texts_and_labels():
     return jsonify({'n_inserted': n_inserts}), 201
 
 
-@app.route("/texts", methods=['GET'])
-def texts():
-    n_texts = request.args.get('n')
-    text_data = {'data': get_texts(n_texts)}
+@app.route("/prioritized_texts", methods=['GET'])
+def prioritized_texts():
+    """
+    Retrieves all of the political statements from the database, sends them to the manifesto model to be prioritized
+    and returns at most as many texts given in the GET parameter `n`, ordered by their uncertainty.
+
+    :return: {
+        'data': [
+            {'text_id': 1, 'label': 'left'},
+            ...
+        ]
+    }
+    """
+    n_texts = int(request.args.get('n'))
+    texts = get_texts_only(1000000)
+
+    samples = {
+        'data': list(map(lambda entry: {'text_id': entry['text_id'], 'text': entry['statement']}, texts))
+    }
+
+    # ask model about sample uncertainty
+    url = 'http://manifesto_model:{}/estimate_uncertainty'.format(MANIFESTO_MODEL_HTTP_PORT)
+    r = requests.post(
+        url=url,
+        json=samples
+    )
+    priotized_text_ids = list(map(lambda e: int(e['text_id']), r.json()['data'][:n_texts]))
+    priotized_texts = get_texts_with_ids(priotized_text_ids)
+
+    text_data = {'data': priotized_texts}
     return jsonify(text_data)
 
 
@@ -73,96 +120,96 @@ def insert_into(database_filename, text_ids, labels, annotation_source):
     conn.close()
 
 
-def get_texts(n_texts):
+def get_texts_with_ids(ids):
     """
-    return at most `n_texts` from the underlying storage.
-    :param n_texts: how many texts to retrieve, integer.
+    :param ids:
+    :return:
     """
     conn = sqlite3.connect(DB_FILENAME)
     c = conn.cursor()
     return [
         {
             'text_id': text_id,
-            'statement': statement,
-            'label': label,
-            'source': source
-        } for text_id, statement, label, source, _, _ in c.execute(
-        """
-        SELECT
-            t.id text_id,
-            t.statement,
-            l.label,
-            l.source,
-            t.created_at,
-            l.created_at
-        FROM texts t
-        INNER JOIN labels l ON l.texts_id = t.id
-        ORDER BY RANDOM()
-        LIMIT ?""",
-        (n_texts, )
+            'statement': statement
+        } for text_id, statement, in c.execute(
+            """
+            SELECT
+                t.id text_id,
+                t.statement
+            FROM texts t
+            WHERE t.id IN({text_ids})""".format(text_ids=','.join('?'*len(ids))),
+            ids
         )
     ]
 
 
-def create_manifesto_storage(texts, labels):
+def get_texts_only(n_texts):
     """
-    creates required tables and inserts all of the given texts and labels.
+    return the text data only without labels, at most `n_texts`.
 
-    :param texts: iterable of political texts.
-    :param labels: iterable of political text labels.
+    :param n_texts: how many texts to retrieve, integer.
+    :return: majority voted labels per text: [
+        {'text_id': 1, 'statement': 'some statement', 'label': 'left'},
+        ...
+    ]
     """
     conn = sqlite3.connect(DB_FILENAME)
     c = conn.cursor()
+    results = [
+        {
+            'text_id': text_id,
+            'statement': statement
+        } for text_id, statement in c.execute(
+            """
+            SELECT
+                t.id text_id,
+                t.statement
+            FROM texts t
+            LIMIT ?""",
+            (n_texts, )
+        )
+    ]
+    return results
 
-    c.execute('DROP TABLE IF EXISTS texts')
-    c.execute(
-        '''CREATE TABLE texts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                statement TEXT NOT NULL
-            )
-        '''
+
+def get_texts_with_majority_voted_labels(n_texts):
+    """
+    return at most `n_texts` from the underlying storage, accounting for multiple labels per text.
+    label with most votes wins, in break even situations a random label is chosen.
+
+    :param n_texts: how many texts to retrieve, integer.
+    :return: majority voted labels per text: [
+        {'text_id': 1, 'statement': 'some statement', 'label': 'left'},
+        ...
+    ]
+    """
+    conn = sqlite3.connect(DB_FILENAME)
+    c = conn.cursor()
+    results = [
+        {
+            'text_id': text_id,
+            'statement': statement,
+            'labels': labels
+        } for text_id, statement, labels in c.execute(
+            """
+            SELECT
+                t.id text_id,
+                t.statement,
+                GROUP_CONCAT(l.label) labels
+            FROM texts t
+            INNER JOIN labels l ON l.texts_id = t.id
+            GROUP BY t.id, t.statement
+            LIMIT ?""",
+            (n_texts, )
+        )
+    ]
+    results = list(
+        map(
+            lambda r: {'text_id': r['text_id'], 'statement': r['statement'], 'label': max(set(r['labels'].split(',')), key=r['labels'].count)},
+            results
+        )
     )
-    c.execute('DROP TABLE IF EXISTS labels')
-    c.execute(
-        '''CREATE TABLE labels (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                texts_id INTEGER NOT NULL,
-                label INTEGER NOT NULL,
-                source text NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(texts_id) REFERENCES texts(id)
-            )
-        '''
-    )
-    conn.commit()
-    conn.close()
-
-    insert_into(DB_FILENAME, texts, labels, 'manifesto')
-
-    # for statement, label, source, text_created, label_created in c.execute(
-    #         """
-    #         SELECT
-    #             t.statement,
-    #             l.label,
-    #             l.source,
-    #             t.created_at,
-    #             l.created_at
-    #         FROM texts t
-    #         INNER JOIN labels l ON l.texts_id = t.id
-    #         LIMIT 10"""
-    # ):
-    #     print(statement, label, source)
-    #
-    # print(
-    #     'inserted',
-    #     c.execute("SELECT count(1) FROM texts").fetchone(),
-    #     'texts with',
-    #     c.execute("SELECT count(1) FROM labels").fetchone(),
-    #     'labels'
-    # )
-    #
-    # conn.close()
+    return results
 
 
 if __name__ == "__main__":
