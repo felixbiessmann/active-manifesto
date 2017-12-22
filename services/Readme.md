@@ -11,7 +11,7 @@ docker-compose --version
 To startup all services, simply `$ ./run.sh`. This command will setup the initial
 database and run all containers, defined in `docker-compose.yml`.
 
-When the containers have started, visit `http://localhost:8080` for the UI.
+When the containers have started, visit `http://localhost:8080/swipe` for the UI.
 Once the persistence container has started it's web api you can request samples
 and submit user labels.
 
@@ -35,43 +35,12 @@ done
 ssh -i ~/.ssh/${kn}.pem ubuntu@$ip
 ```
 
-## build and test single containers
+# Individual containers
 
-### manifesto model
-
-trigger training with
-
-```
-curl -XPOST -H 'Content-Type: application/json' "localhost:5000/train" -d '{"data": [{"label": "left", "text": "meh meh"}, {"label": "right", "text": "3"}, {"label": "right", "text": "3"}, {"label": "right", "text": "3"}, {"label": "right", "text": "3"}, {"label": "left", "text": "3"}, {"label": "left", "text": "3"}, {"label": "left", "text": "3"}, {"label": "left", "text": "3"}]}'
-```
-
-get ordering of texts
-
-```
-curl -XPOST -H 'Content-Type: application/json' "localhost:5000/estimate_uncertainty" -d '{"data": [{"text_id": 1, "text": "meh meh"}, {"text_id": 2, "text": "3"}]}'
-```
-
-
-### manifesto data container
-
-add wzb manifesto api key in `persistence/Dockerfile` to environment variable.
-
-```
-cd persistence
-docker build -t persistence .
-docker run persistence
-```
-
-this will start the manifesto data download and sqlite3 import.
-the data should be accessd via HTTP, e.g:
-
-```
-curl "localhost:8888/texts?n=300"
-# group by label, count
-curl "localhost:8888/texts?n=300" | jq '[{label: .data[].label}]' | jq 'group_by(.label)' | jq 'map({n_texts: length, label: .[0].label})' | jq 'sort_by(.n_texts)'
-```
-
-will return 300 texts with labels and label sources.
+* manifesto model
+* manifesto data container
+* user interface
+* ...
 
 
 ### twitter app
