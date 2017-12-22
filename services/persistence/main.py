@@ -34,7 +34,7 @@ def training_texts():
         ]
     }
     """
-    texts = get_texts_with_majority_voted_labels(1000000)
+    texts = get_texts_with_labels(1000000)
     texts = list(map(lambda entry: {'text': entry['statement'], 'label': entry['label']}, texts))
     return jsonify({'data': texts}), 200
 
@@ -172,12 +172,15 @@ def get_texts_only(n_texts):
     return results
 
 
-def get_texts_with_majority_voted_labels(n_texts):
+def get_texts_with_labels(n_texts, label_strategy='duplicate'):
     """
-    return at most `n_texts` from the underlying storage, accounting for multiple labels per text.
-    label with most votes wins, in break even situations a random label is chosen.
+    return at most `n_texts` from the underlying storage
 
     :param n_texts: how many texts to retrieve, integer.
+    :param label_strategy:  one of ['duplicate', 'majority']
+                            duplicate - repeat each training text as often as there are labels for it.
+                            majority -  each training text is returned exactly once, with majority voted label,
+                                        in break even situations a random label is chosen
     :return: majority voted labels per text: [
         {'text_id': 1, 'statement': 'some statement', 'label': 'left'},
         ...
@@ -185,31 +188,51 @@ def get_texts_with_majority_voted_labels(n_texts):
     """
     conn = sqlite3.connect(DB_FILENAME)
     c = conn.cursor()
-    results = [
-        {
-            'text_id': text_id,
-            'statement': statement,
-            'labels': labels
-        } for text_id, statement, labels in c.execute(
-            """
-            SELECT
-                t.id text_id,
-                t.statement,
-                GROUP_CONCAT(l.label) labels
-            FROM texts t
-            INNER JOIN labels l ON l.texts_id = t.id
-            GROUP BY t.id, t.statement
-            LIMIT ?""",
-            (n_texts, )
+    if label_strategy == 'majority':
+        results = [
+            {
+                'text_id': text_id,
+                'statement': statement,
+                'labels': labels
+            } for text_id, statement, labels in c.execute(
+                """
+                SELECT
+                    t.id text_id,
+                    t.statement,
+                    GROUP_CONCAT(l.label) labels
+                FROM texts t
+                INNER JOIN labels l ON l.texts_id = t.id
+                GROUP BY t.id, t.statement
+                LIMIT ?""",
+                (n_texts, )
+            )
+        ]
+        results = list(
+            map(
+                lambda r: {'text_id': r['text_id'], 'statement': r['statement'], 'label': max(set(r['labels'].split(',')), key=r['labels'].count)},
+                results
+            )
         )
-    ]
-    results = list(
-        map(
-            lambda r: {'text_id': r['text_id'], 'statement': r['statement'], 'label': max(set(r['labels'].split(',')), key=r['labels'].count)},
-            results
-        )
-    )
-    return results
+        return results
+    else:
+        results = [
+            {
+                'text_id': text_id,
+                'statement': statement,
+                'label': label
+            } for text_id, statement, label in c.execute(
+                """
+                SELECT
+                    t.id text_id,
+                    t.statement,
+                    l.label label
+                FROM texts t
+                INNER JOIN labels l ON l.texts_id = t.id
+                LIMIT ?""",
+                (n_texts, )
+            )
+        ]
+        return results
 
 
 if __name__ == "__main__":

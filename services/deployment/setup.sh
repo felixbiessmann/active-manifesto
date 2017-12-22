@@ -38,4 +38,5 @@ pip install -U pandas
 ### clone project and run services
 git clone https://github.com/felixbiessmann/active-manifesto
 cd active-manifesto/services
+# add WZB API KEY to run.sh
 ./run.sh
