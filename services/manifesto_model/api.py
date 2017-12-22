@@ -2,6 +2,7 @@
 import json
 import os
 
+import time
 import numpy as np
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -11,10 +12,12 @@ from classifier import Classifier
 
 app = Flask(__name__)
 
-DEBUG = True  # os.environ.get('DEBUG') != None
+DEBUG = os.environ.get('DEBUG') is not None
 VERSION = 0.1
 
 PERSISTENCE_HTTP_PORT = int(os.environ.get('PERSISTENCE_HTTP_PORT'))
+
+classifier = Classifier()
 
 
 def retrain():
@@ -35,6 +38,10 @@ def retrain():
     print('training on', len(texts), 'samples')
     classifier.train(texts, labels)
 
+
+# give some time for persistence to be up
+time.sleep(5)
+retrain()
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(retrain, 'interval', minutes=60)
@@ -82,5 +89,4 @@ def estimate_uncertainty():
 
 if __name__ == "__main__":
     port = int(os.environ.get('HTTP_PORT'))
-    classifier = Classifier(train=False)
     app.run(host='0.0.0.0', port=port, debug=DEBUG)

@@ -16,6 +16,25 @@ Once the persistence container has started it's web api you can request samples
 and submit user labels.
 
 
+# EC2 deployment
+
+```
+export kn=tdhd
+iid=$(aws ec2 run-instances --image-id ami-df8406b0 --security-group-ids launch-wizard-1 --count 1 --instance-type t2.micro --key-name $kn --query 'Instances[0].InstanceId' | sed -e 's/^"//' -e 's/"$//')
+while true
+do
+   echo "Checking EC2 for public IP..."
+   ip=$(aws ec2 describe-instances --instance-ids $iid --query 'Reservations[0].Instances[0].PublicIpAddress' | sed -e 's/^"//' -e 's/"$//')
+   aws ec2 describe-instances --instance-ids $iid --query 'Reservations[0].Instances[0].State.Name' # "running"
+   if (($#ip > 5)); then
+     echo "EC2 instance is up @ $ip"
+     break;
+   fi
+   sleep 2
+done
+ssh -i ~/.ssh/${kn}.pem ubuntu@$ip
+```
+
 ## build and test single containers
 
 ### manifesto model

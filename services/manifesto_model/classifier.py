@@ -16,7 +16,7 @@ label2rightleft = {
 
 
 class Classifier:
-    def __init__(self, train=False):
+    def __init__(self):
         """
         Creates a classifier object
         if no model is found, or train is set True, a new classifier is learned
