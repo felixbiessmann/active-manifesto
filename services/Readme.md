@@ -8,7 +8,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 ```
 
-To startup all services, simply `$ ./run.sh`. This command will setup the initial
+To startup all services, simply `$ ./deployment/run.sh`. This command will setup the initial
 database and run all containers, defined in `docker-compose.yml`.
 
 When the containers have started, visit `http://localhost:8080/swipe` for the UI.
