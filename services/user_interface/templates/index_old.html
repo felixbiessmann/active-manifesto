@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Active Manifesto</title>
+
+    <meta name="description" content="Source code generated using layoutit.com">
+    <meta name="author" content="LayoutIt!">
+
+    <script
+            src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+
+</head>
+<script>
+
+        function makeHttpObject() {
+          try {return new XMLHttpRequest();}
+          catch (error) {}
+          try {return new ActiveXObject("Msxml2.XMLHTTP");}
+          catch (error) {}
+          try {return new ActiveXObject("Microsoft.XMLHTTP");}
+          catch (error) {}
+          throw new Error("Could not create HTTP request object.");
+        }
+
+        function get_samples() {
+            var request = makeHttpObject();
+            request.open("GET", "/get_samples?n=3", false);
+            request.send(null);
+            return JSON.parse(request.responseText)['data'];
+        }
+
+        function get_and_insert_samples() {
+            var samples = get_samples();
+            console.log(samples);
+            var markup = "";
+            for(var i = 0; i < samples.length; i++) {
+                console.log(i)
+                var label = "label_" + i
+                markup +=
+                    "<tr>" +
+                    "<td>" + samples[i]['text_id'] + "</td>" +
+                    "<td>" + samples[i]['statement'] + "</td>" +
+                    "<td>" +
+                    "<input type=\"radio\" name=\""+label+"\" value=\"left\">left<br>" +
+                    "<input type=\"radio\" name=\""+label+"\" checked=\"checked\" value=\"neutral\">neutral<br>" +
+                    "<input type=\"radio\" name=\""+label+"\" value=\"right\">right" +
+                    "</td>" +
+                    "</tr>";
+            }
+            $("table tbody tr").remove();
+            $("table tbody").append(markup);
+        }
+
+        function get_radio_value_and_send() {
+            var selected_radios = $("table tr td input:checked").map(function() {
+                return this.value;
+            });
+            var all_first_col = $("table tr td:first-child").map(function() {
+                return $(this).text();
+            });
+            var ids = [];
+            for(var i = 1; i < all_first_col.length; i++) {
+                ids.push(parseInt(all_first_col[i]));
+            }
+            var data = [];
+            for(var i = 0; i < selected_radios.length; i++) {
+                data.push({'text_id': ids[i], 'label': selected_radios[i]})
+            }
+            data = {
+                'data': data
+            };
+            console.log(data);
+            var request = makeHttpObject();
+            request.open("POST", "/user_labels", false);
+            request.setRequestHeader("Content-Type", "application/json");
+            request.send(JSON.stringify(data));
+        }
+
+    </script>
+
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="text-center">
+                Active Manifesto
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3">
+            <h2>Interface buttons</h2>
+            <button type="button" class="btn btn-info" onclick="get_and_insert_samples()">
+                Get samples
+            </button>
+            <hr>
+            <button type="button" class="btn btn-success" onclick="get_radio_value_and_send()">
+                submit labels
+            </button>
+            <hr>
+            todo: display area for bias estimation
+        </div>
+        <div class="col-md-9">
+            <h2>
+                Political Samples
+            </h2>
+            <div class="row">
+                <div class="col-md-12">
+                    <table class="table table-bordered">
+                        <thead>
+                        <tr>
+                            <td>
+                                Id
+                            </td>
+                            <th>
+                                Sample text
+                            </th>
+                            <th>
+                                User Label
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
