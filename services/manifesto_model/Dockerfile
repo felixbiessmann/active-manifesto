@@ -1,6 +1,9 @@
 # Use an official Python runtime as a parent image
 FROM python:3.6-slim
 
+# For mounting the database
+RUN mkdir /db
+
 # Set the working directory to /app
 WORKDIR /app
 
