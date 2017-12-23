@@ -4,8 +4,7 @@ import json
 import os
 import requests
 
-from flask import Flask
-from flask import render_template, request
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 app.debug = True
@@ -43,6 +42,22 @@ def get_samples():
         )
     )
     return json.dumps(r.json())
+
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    req = json.loads(request.get_data(as_text=True))
+    print('ui req', req)
+    # registered hostname of service in docker-compose network
+    url = 'http://manifesto_model:{}/predict'.format(MANIFESTO_MODEL_HTTP_PORT)
+    r = requests.post(url=url, json=req)
+    print(r.status_code)
+    return jsonify(r.json())
+
+
+@app.route('/viz')
+def viz():
+    return render_template('viz.html')
 
 
 @app.route('/swipe')

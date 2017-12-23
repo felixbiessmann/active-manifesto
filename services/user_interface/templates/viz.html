@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Active Manifesto</title>
+
+    <meta name="description" content="Source code generated using layoutit.com">
+    <meta name="author" content="LayoutIt!">
+
+    <script
+            src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+</head>
+<script>
+        function makeHttpObject() {
+          try {return new XMLHttpRequest();}
+          catch (error) {}
+          try {return new ActiveXObject("Msxml2.XMLHTTP");}
+          catch (error) {}
+          try {return new ActiveXObject("Microsoft.XMLHTTP");}
+          catch (error) {}
+          throw new Error("Could not create HTTP request object.");
+        }
+
+$( document ).ready(function() {
+    // histogram of class probas
+    var data = [
+      {
+        x: [],
+        y: [],
+        type: 'bar'
+      }
+    ];
+    Plotly.newPlot('bar', data);
+
+    $( ".target" ).keypress(function() {
+        var query = $('.target').val();
+        console.log(query);
+
+        // send http req to model to get query class probas
+        var request = makeHttpObject();
+        request.open("POST", "/predict", false);
+        request.setRequestHeader("Content-Type", "application/json");
+        request.send(JSON.stringify({"text": query, "proba": true}));
+        var sampleClassProbas = JSON.parse(request.responseText)['prediction'];
+        console.log(sampleClassProbas);
+        console.log(Object.keys(sampleClassProbas));
+        console.log(Object.values(sampleClassProbas));
+
+        // histogram of class probas
+        var data = [
+          {
+            x: Object.keys(sampleClassProbas),
+            y: Object.values(sampleClassProbas),
+            type: 'bar'
+          }
+        ];
+        Plotly.newPlot('bar', data);
+    });
+
+});
+
+</script>
+
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="text-center">
+                Active Manifesto - Political Statement Tagger
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <div>
+            Textanalysis - type to see query association
+        </div>
+        <input class="target" type="text" value="">
+        <div id="bar" style="height: 500px; width: 500px; background-color: rgba(0,0,0,0.1);">
+            <div class="text-center">
+                bar plot description
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

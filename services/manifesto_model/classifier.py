@@ -10,6 +10,7 @@ from sklearn.pipeline import Pipeline
 import pandas as pd
 import scipy.stats
 
+DEBUG = True
 
 # manifestoproject codes for left/right orientation
 label2rightleft = {
@@ -102,7 +103,12 @@ class Classifier:
         """
         # the scikit learn pipeline for vectorizing, normalizing and classifying text
         text_clf = Pipeline([('vect', HashingVectorizer()), ('clf', SGDClassifier(loss="log", max_iter=3))])
-        parameters = {'clf__alpha': (10. ** sp.arange(-6, -4, 1.)).tolist()}
+
+        if DEBUG:
+            parameters = {}
+        else:
+            parameters = {'clf__alpha': (10. ** sp.arange(-6, -4, 1.)).tolist()}
+
         # perform gridsearch to get the best regularizer
         gs_clf = GridSearchCV(text_clf, parameters, n_jobs=-1, verbose=4)
         gs_clf.fit(data, labels)
