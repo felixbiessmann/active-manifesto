@@ -55,6 +55,14 @@ def predict():
     return jsonify(r.json())
 
 
+@app.route('/debug/uncertainties')
+def debug_uncertainties():
+    # registered hostname of service in docker-compose network
+    url = 'http://manifesto_model:{}/debug/uncertainties'.format(MANIFESTO_MODEL_HTTP_PORT)
+    r = requests.get(url=url)
+    return jsonify(r.json())
+
+
 @app.route('/viz')
 def viz():
     return render_template('viz.html')

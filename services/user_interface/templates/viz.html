@@ -29,52 +29,138 @@
 
 </head>
 <script>
-        function makeHttpObject() {
-          try {return new XMLHttpRequest();}
-          catch (error) {}
-          try {return new ActiveXObject("Msxml2.XMLHTTP");}
-          catch (error) {}
-          try {return new ActiveXObject("Microsoft.XMLHTTP");}
-          catch (error) {}
-          throw new Error("Could not create HTTP request object.");
-        }
+    function makeHttpObject() {
+        try {return new XMLHttpRequest();}
+        catch (error) {}
+        try {return new ActiveXObject("Msxml2.XMLHTTP");}
+        catch (error) {}
+        try {return new ActiveXObject("Microsoft.XMLHTTP");}
+        catch (error) {}
+        throw new Error("Could not create HTTP request object.");
+    }
+
+    function plot_corpus_uncertainties() {
+        // get current model uncertainities estimates and plot them
+        var request = makeHttpObject();
+        request.open("GET", "/debug/uncertainties", false);
+        request.send(null);
+        var label_sample_uncertainties = JSON.parse(request.responseText);
+
+        // boxplot
+        var traces = Object.keys(label_sample_uncertainties).map(function(entry) {
+            return {
+                y: label_sample_uncertainties[entry],
+                name: entry,
+                type: 'box'
+            };
+        });
+        var layout = {
+          title: 'Corpus sample uncertainties by label',
+          xaxis: {
+            title: 'Label',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            }
+          },
+          yaxis: {
+            title: 'Sample uncertainty',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            }
+          }
+        };
+        Plotly.newPlot('corpus_uncertainties_box', traces, layout);
+
+        // histogram
+        var traces = Object.keys(label_sample_uncertainties).map(function(entry) {
+            return {
+                x: label_sample_uncertainties[entry],
+                name: entry,
+                type: 'histogram',
+                // histnorm: 'probability',
+                xbins: {
+                    end: 1.0,
+                    size: 0.15,
+                    start: 0.0
+                }
+            };
+        });
+        var layout = {
+          title: 'Corpus sample uncertainties by label',
+          xaxis: {
+            title: 'Sample uncertainty',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            }
+          },
+          yaxis: {
+            title: 'Sample Count',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            }
+          }
+        };
+        Plotly.newPlot('corpus_uncertainties_hist', traces, layout);
+    }
+
+    function plot_query_label_assoc() {
+        var layout = {
+          title: 'Query label association',
+          xaxis: {
+            title: 'Label',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            }
+          },
+          yaxis: {
+            title: 'Model Confidence',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            }
+          }
+        };
+
+        $( "#query_input" ).keypress(function() {
+            var query = $('#query_input').val();
+            console.log(query);
+
+            // send http req to model to get query class probas
+            var request = makeHttpObject();
+            request.open("POST", "/predict", false);
+            request.setRequestHeader("Content-Type", "application/json");
+            request.send(JSON.stringify({"text": query, "proba": true}));
+            var sampleClassProbas = JSON.parse(request.responseText)['prediction'];
+            console.log(sampleClassProbas);
+            console.log(Object.keys(sampleClassProbas));
+            console.log(Object.values(sampleClassProbas));
+
+            // histogram of class probas
+            var data = [
+              {
+                x: Object.keys(sampleClassProbas),
+                y: Object.values(sampleClassProbas),
+                type: 'bar'
+              }
+            ];
+            Plotly.newPlot('bar', data, layout);
+        });
+    }
 
 $( document ).ready(function() {
-    // histogram of class probas
-    var data = [
-      {
-        x: [],
-        y: [],
-        type: 'bar'
-      }
-    ];
-    Plotly.newPlot('bar', data);
-
-    $( ".target" ).keypress(function() {
-        var query = $('.target').val();
-        console.log(query);
-
-        // send http req to model to get query class probas
-        var request = makeHttpObject();
-        request.open("POST", "/predict", false);
-        request.setRequestHeader("Content-Type", "application/json");
-        request.send(JSON.stringify({"text": query, "proba": true}));
-        var sampleClassProbas = JSON.parse(request.responseText)['prediction'];
-        console.log(sampleClassProbas);
-        console.log(Object.keys(sampleClassProbas));
-        console.log(Object.values(sampleClassProbas));
-
-        // histogram of class probas
-        var data = [
-          {
-            x: Object.keys(sampleClassProbas),
-            y: Object.values(sampleClassProbas),
-            type: 'bar'
-          }
-        ];
-        Plotly.newPlot('bar', data);
-    });
-
+    plot_corpus_uncertainties();
+    plot_query_label_assoc();
 });
 
 </script>
@@ -84,19 +170,24 @@ $( document ).ready(function() {
     <div class="row">
         <div class="col-md-12">
             <h1 class="text-center">
-                Active Manifesto - Political Statement Tagger
+                Active Manifesto
             </h1>
         </div>
     </div>
     <div class="row">
-        <div>
-            Textanalysis - type to see query association
-        </div>
-        <input class="target" type="text" value="">
-        <div id="bar" style="height: 500px; width: 500px; background-color: rgba(0,0,0,0.1);">
-            <div class="text-center">
-                bar plot description
+        <div class="col-md-4">
+            <div>
+                Textanalysis - type to see query association
             </div>
+            <input id="query_input" type="text" value="">
+            <div id="bar" style="height: 500px; width: 500px; background-color: rgba(0,0,0,0.1);"></div>
+        </div>
+
+        <div class="col-md-4">
+            <div id="corpus_uncertainties_box" style="height: 500px; width: 500px; background-color: rgba(0,0,0,0.1);"></div>
+        </div>
+        <div class="col-md-4">
+            <div id="corpus_uncertainties_hist" style="height: 500px; width: 500px; background-color: rgba(0,0,0,0.1);"></div>
         </div>
     </div>
 </div>

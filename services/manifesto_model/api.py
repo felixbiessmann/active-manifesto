@@ -7,7 +7,7 @@ import numpy as np
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify
-
+from collections import defaultdict
 from sqlite_wrapper import get_texts_with_labels, insert_into, get_texts_only, get_texts_with_ids
 
 from classifier import Classifier
@@ -130,6 +130,32 @@ def predict():
         result = classifier.predict([text])
     print('result', result)
     return jsonify({'prediction': result})
+
+
+@app.route("/debug/uncertainties")
+def debug_uncertainties():
+    """
+    Gets all political texts, computes sample uncertainties and groups by label
+
+    :return: sample uncertainties grouped by label {
+        'left': [0.1, 0.02, 0.55],
+        'neutral': [...],
+        ...
+    }
+    """
+    samples = get_texts_with_labels(n_all_samples)
+    texts = list(map(lambda sample: sample['statement'], samples))
+    labels = list(map(lambda sample: sample['label'], samples))
+
+    probas = classifier.smooth_probas(classifier.clf.predict_proba(texts))
+    uncertainties = classifier.per_sample_uncertainty_from(probas).tolist()
+
+    # per label sample uncertainties
+    dd = defaultdict(list)
+    for label, uncertainty in zip(labels, uncertainties):
+        dd[label] = dd[label] + [uncertainty]
+
+    return jsonify(dd)
 
 
 if __name__ == "__main__":
