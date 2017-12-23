@@ -12,4 +12,4 @@ ADD . /api
 
 RUN pip install -r requirements.txt
 
-CMD ["python", "main.py"]
+CMD ["python", "web_api.py"]

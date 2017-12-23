@@ -76,6 +76,7 @@ def estimate_uncertainty():
         ]
     }
     """
+    # n_texts = int(request.args.get('n'))
     request_data = json.loads(request.get_data(as_text=True))['data']
     texts = list(map(lambda entry: entry['text'], request_data))
     text_ids = list(map(lambda entry: entry['text_id'], request_data))
