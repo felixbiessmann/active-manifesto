@@ -77,10 +77,14 @@ def create_manifesto_storage(texts, labels):
 def is_first_run():
     conn = sqlite3.connect(DB_FILENAME)
     c = conn.cursor()
-    n_texts = c.execute("SELECT count(1) FROM labels WHERE source = 'manifesto'").fetchone()
+    # prevent default data drop
+    n_texts = [1]
+    n_tables = c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='labels' or name='texts'").fetchone()
+    if n_tables == 2:
+        n_texts = c.execute("SELECT count(1) FROM labels WHERE source = 'manifesto'").fetchone()
     conn.commit()
     conn.close()
-    return n_texts[0] == 0
+    return n_texts[0] == 0 or n_tables is None
 
 
 if __name__ == "__main__":

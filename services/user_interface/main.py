@@ -4,14 +4,13 @@ import json
 import os
 import requests
 
-from flask import Flask
-from flask import render_template, request
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 app.debug = True
 app.secret_key = 'development'
 
-PERSISTENCE_HTTP_PORT = os.environ.get('PERSISTENCE_HTTP_PORT')
+MANIFESTO_MODEL_HTTP_PORT = os.environ.get('MANIFESTO_MODEL_HTTP_PORT')
 HTTP_PORT = int(os.environ.get('HTTP_PORT'))
 
 
@@ -22,7 +21,7 @@ def user_labels():
     """
     labels = json.loads(request.get_data(as_text=True))
     # registered hostname of service in docker-compose network
-    url = 'http://persistence:{}/texts_and_labels'.format(PERSISTENCE_HTTP_PORT)
+    url = 'http://manifesto_model:{}/texts_and_labels'.format(MANIFESTO_MODEL_HTTP_PORT)
     print(labels)
     r = requests.post(
         url=url,
@@ -37,19 +36,43 @@ def user_labels():
 def get_samples():
     n_texts = request.args.get('n')
     r = requests.get(
-        'http://persistence:{}/prioritized_texts?n={}'.format(
-            PERSISTENCE_HTTP_PORT,
+        'http://manifesto_model:{}/prioritized_texts?n={}'.format(
+            MANIFESTO_MODEL_HTTP_PORT,
             n_texts
         )
     )
     return json.dumps(r.json())
 
 
+@app.route('/predict', methods=['POST'])
+def predict():
+    req = json.loads(request.get_data(as_text=True))
+    print('ui req', req)
+    # registered hostname of service in docker-compose network
+    url = 'http://manifesto_model:{}/predict'.format(MANIFESTO_MODEL_HTTP_PORT)
+    r = requests.post(url=url, json=req)
+    print(r.status_code)
+    return jsonify(r.json())
+
+
+@app.route('/debug/uncertainties')
+def debug_uncertainties():
+    # registered hostname of service in docker-compose network
+    url = 'http://manifesto_model:{}/debug/uncertainties'.format(MANIFESTO_MODEL_HTTP_PORT)
+    r = requests.get(url=url)
+    return jsonify(r.json())
+
+
+@app.route('/viz')
+def viz():
+    return render_template('viz.html')
+
+
 @app.route('/swipe')
 def swipe():
     return render_template(
         'swipe.html',
-        persistence_host='http://0.0.0.0:'+str(PERSISTENCE_HTTP_PORT)
+        # persistence_host='http://0.0.0.0:'+str(MANIFESTO_MODEL_HTTP_PORT)
     )
 
 
@@ -57,7 +80,7 @@ def swipe():
 def index():
     return render_template(
         'index.html',
-        persistence_host='http://0.0.0.0:'+str(PERSISTENCE_HTTP_PORT)
+        # persistence_host='http://0.0.0.0:'+str(MANIFESTO_MODEL_HTTP_PORT)
     )
 
 

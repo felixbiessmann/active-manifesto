@@ -7,9 +7,9 @@ RUN apt-get install -y sqlite3 libsqlite3-dev
 RUN mkdir /db
 RUN /usr/bin/sqlite3 ${DB_PATH}
 
-WORKDIR /api
-ADD . /api
-
-RUN pip install -r requirements.txt
-
-CMD ["python", "main.py"]
+#WORKDIR /api
+#ADD . /api
+#
+#RUN pip install -r requirements.txt
+#
+#CMD ["python", "web_api.py"]

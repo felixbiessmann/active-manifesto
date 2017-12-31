@@ -2,52 +2,26 @@
 import json
 import os
 
+import time
 import numpy as np
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify
+from collections import defaultdict
+from sqlite_wrapper import get_texts_with_labels, insert_into, get_texts_only, get_texts_with_ids
 
 from classifier import Classifier
 
 app = Flask(__name__)
 
-DEBUG = True  # os.environ.get('DEBUG') != None
+DEBUG = True  # os.environ.get('DEBUG') is not None
 VERSION = 0.1
 
-PERSISTENCE_HTTP_PORT = int(os.environ.get('PERSISTENCE_HTTP_PORT'))
+classifier = Classifier()
+
+n_all_samples = 1000000
 
 
-def retrain():
-    """
-    Fetches latest training data from persistence service and retrains the manifesto model with it.
-    """
-    print('retrain called')
-
-    url = 'http://persistence:{}/training_texts'.format(PERSISTENCE_HTTP_PORT)
-    print('requesting training data from persistence...')
-    r = requests.get(url=url)
-    print(r.status_code)
-
-    response_data = r.json()['data']
-    texts = list(map(lambda entry: entry['text'], response_data))
-    labels = list(map(lambda entry: entry['label'], response_data))
-
-    print('training on', len(texts), 'samples')
-    classifier.train(texts, labels)
-
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(retrain, 'interval', minutes=60)
-scheduler.start()
-
-
-@app.route("/predict", methods=['POST'])
-def predict():
-    text = request.form['text']
-    return jsonify(classifier.predict(text))
-
-
-@app.route("/estimate_uncertainty", methods=['POST'])
 def estimate_uncertainty():
     """
     estimates text uncertainties.
@@ -69,6 +43,7 @@ def estimate_uncertainty():
         ]
     }
     """
+    # n_texts = int(request.args.get('n'))
     request_data = json.loads(request.get_data(as_text=True))['data']
     texts = list(map(lambda entry: entry['text'], request_data))
     text_ids = list(map(lambda entry: entry['text_id'], request_data))
@@ -80,7 +55,110 @@ def estimate_uncertainty():
     return jsonify({"data": response_data})
 
 
+def retrain():
+    """
+    Fetches latest training data from persistence service and retrains the manifesto model with it.
+    """
+    response_data = get_texts_with_labels(n_all_samples)
+    texts = list(map(lambda entry: entry['statement'], response_data))
+    labels = list(map(lambda entry: entry['label'], response_data))
+    print('training on', len(texts), 'samples')
+    classifier.train(texts, labels)
+
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(retrain, 'interval', minutes=60)
+scheduler.start()
+
+
+@app.route("/texts_and_labels", methods=['POST'])
+def texts_and_labels():
+    """
+    Stores labels for the specified text ids.
+
+    expects a POST-body in the format:
+    {
+        "data": [
+            {"text_id": 17342, "label": "left"},
+            {"text_id": 873, "label": "neutral"},
+            ...
+        ]
+    }
+    """
+    texts_with_labels = json.loads(request.get_data(as_text=True))['data']
+    text_ids = map(lambda entry: entry['text_id'], texts_with_labels)
+    labels = map(lambda entry: entry['label'], texts_with_labels)
+
+    insert_into(text_ids, labels, 'user')
+    n_inserts = len(texts_with_labels)
+
+    return jsonify({'n_inserted': n_inserts}), 201
+
+
+@app.route("/prioritized_texts", methods=['GET'])
+def prioritized_texts():
+    """
+    Retrieves all of the political statements from the database, prioritizes them with the manifesto model
+    and returns at most as many texts given in the GET parameter `n`, ordered by their uncertainty.
+
+    :return: {
+        'data': [
+            {'text_id': 1, 'label': 'left'},
+            ...
+        ]
+    }
+    """
+    print("getting prioritized texts")
+    n_texts = int(request.args.get('n'))
+    texts = get_texts_only(n_all_samples)
+    prios_texts = classifier.prioritize(map(lambda t: t['statement'], texts))
+    # print(prios_texts)
+    texts_priotized = np.array(texts)[np.array(prios_texts)].tolist()
+    # print(texts_priotized)
+    return jsonify({'data': texts_priotized[:n_texts]})
+
+
+@app.route("/predict", methods=['POST'])
+def predict():
+    req = json.loads(request.get_data(as_text=True))
+    print('model/predict parsed', req)
+    text = req['text']
+    req['proba'] = False
+    if req['proba']:
+        result = classifier.clf.predict_proba([text])[0].tolist()
+    else:
+        result = classifier.predict([text])
+    print('result', result)
+    return jsonify({'prediction': result})
+
+
+@app.route("/debug/uncertainties")
+def debug_uncertainties():
+    """
+    Gets all political texts, computes sample uncertainties and groups by label
+
+    :return: sample uncertainties grouped by label {
+        'left': [0.1, 0.02, 0.55],
+        'neutral': [...],
+        ...
+    }
+    """
+    samples = get_texts_with_labels(n_all_samples)
+    texts = list(map(lambda sample: sample['statement'], samples))
+    labels = list(map(lambda sample: sample['label'], samples))
+
+    probas = classifier.smooth_probas(classifier.clf.predict_proba(texts))
+    uncertainties = classifier.per_sample_uncertainty_from(probas).tolist()
+
+    # per label sample uncertainties
+    dd = defaultdict(list)
+    for label, uncertainty in zip(labels, uncertainties):
+        dd[label] = dd[label] + [uncertainty]
+
+    return jsonify(dd)
+
+
 if __name__ == "__main__":
+    retrain()
     port = int(os.environ.get('HTTP_PORT'))
-    classifier = Classifier(train=False)
     app.run(host='0.0.0.0', port=port, debug=DEBUG)

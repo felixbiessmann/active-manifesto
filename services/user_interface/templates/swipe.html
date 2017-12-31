@@ -55,7 +55,18 @@
           function msg(direction) {
             // finished labelling round
             if(swipeCount >= maxSwipes) {
-              $("#political_samples_box").html("Thank you for participating in this evaluation. To start again, tap!");
+              $("#political_samples_box").html(
+                    `Thank you for participating in the evaluation.
+
+                    To start labelling, please click or tap this description.
+                    You will be shown a few political statements, for which you decide their political orientation.
+                    Depending on the direction you swipe, the currently shown sample will be tagged as:
+                    <ul>
+                        <li><b>left</b> - for swiping left</li>
+                        <li><b>right</b> - for swiping right</li>
+                        <li><b>neutral</b> - for swiping down</li>
+                    </ul>`
+              );
               started = false;
 
               var user_labels = sessionSamples.map(function(sample) {
@@ -121,30 +132,17 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12">
-            <h2>
-                Instructions
-            </h2>
-            <div class="row">
-                <div class="col-md-3">
-                To start labelling, please click or tap the gray area.
-                You will be shown a few political statements, for which you decide their political orientation.
-                Depending on the direction you swipe, the currently shown sample will be tagged as:
-                <ul>
-                    <li><b>left</b> - for swiping left</li>
-                    <li><b>right</b> - for swiping right</li>
-                    <li><b>neutral</b> - for swiping down</li>
-                </ul>
-                </div>
-                <div class="col-md-9"></div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <div id="swipe" style="height: 250px; width: 350px; background-color: rgba(0,0,0,0.1);">
-                        <div id="political_samples_box">
-                            To begin bias estimation, tap this area once.
-                        </div>
-                    </div>
+        <div class="col-md-2 col-md-offset-5">
+            <div id="swipe" style="height: 250px; width: 350px; background-color: rgba(0,0,0,0.1);">
+                <div id="political_samples_box" class="text-center">
+                    To start labelling, please click or tap this description.
+                    You will be shown a few political statements, for which you decide their political orientation.
+                    Depending on the direction you swipe, the currently shown sample will be tagged as:
+                    <ul>
+                        <li><b>left</b> - for swiping left</li>
+                        <li><b>right</b> - for swiping right</li>
+                        <li><b>neutral</b> - for swiping down</li>
+                    </ul>
                 </div>
             </div>
         </div>
