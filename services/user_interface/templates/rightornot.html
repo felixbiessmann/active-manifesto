@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Active Manifesto</title>
+
+    <meta name="description" content="Source code generated using layoutit.com">
+    <meta name="author" content="LayoutIt!">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css">
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.6/umd/popper.min.js"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.touchSwipe.min.js') }}"></script>
+
+</head>
+<script>
+
+  var maxSwipes=10;
+
+
+        function makeHttpObject() {
+          try {return new XMLHttpRequest();}
+          catch (error) {}
+          try {return new ActiveXObject("Msxml2.XMLHTTP");}
+          catch (error) {}
+          try {return new ActiveXObject("Microsoft.XMLHTTP");}
+          catch (error) {}
+          throw new Error("Could not create HTTP request object.");
+        }
+
+        function get_samples() {
+            var request = makeHttpObject();
+            request.open("GET", "/get_samples?n="+maxSwipes, false);
+            request.send(null);
+            return JSON.parse(request.responseText)['data'];
+        }
+
+        $(function() {
+          var sessionSamples = []
+          var swipeCount=0;
+          var wrong=0;
+          var error_direction=0;
+          var started=false;
+          var labeled_data = [];
+
+          var sessionSamples = get_samples();
+
+          function msg(direction) {
+            // finished labelling round
+            if(swipeCount >= maxSwipes) {
+              $("#political_samples_box").html(
+                    `
+                    <p>Wir zeigen einige politische Texte. </p>
+                    <p>
+                    Swipe
+                    <ul>
+                        <li><b>links</b> wenn Du den Text links fandest</li>
+                        <li><b>rechts</b> wenn Du den Text rechts fandest</li>
+                        <li><b>runter</b> wenn Du den Text neutral fandest</li>
+                    </ul>`
+              );
+              started = false;
+              data = {
+                  'data': labeled_data
+              };
+              var request = makeHttpObject();
+              request.open("POST", "/user_labels", false);
+              request.setRequestHeader("Content-Type", "application/json");
+              request.send(JSON.stringify(data));
+
+            } else {
+              $("#political_samples_box").html(sessionSamples[swipeCount]['statement']);
+              $("#results_box").html(`Falsch: ` + (wrong / swipeCount).toPrecision(2) + " | Bias: " + error_direction + " (" + map_left_right(error_direction) + ")" )
+            }
+          }
+
+          function map_left_right(direction){
+            lr = "neutral";
+            if (direction > 0) {lr = "rechts";};
+            if (direction < 0) {lr = "links";};
+            return lr
+          }
+
+          function map_label(direction) {
+            switch(direction){
+              case "left": return -1;
+              case "down": return 0;
+              case "neutral": return 0;
+              case "right": return 1;
+              default: return 0;
+            }
+          }
+
+          function map_label_string(direction) {
+            label = direction;
+            switch(direction){
+              case "down": label = "neutral";
+            }
+            return label
+          }
+
+          function tag_current_statement(direction) {
+              if (sessionSamples[swipeCount]['label'] != ""){
+                error = map_label(sessionSamples[swipeCount]['label']) - map_label(direction);
+                if (error != 0) {
+                  wrong++;
+                  error_direction += error;
+                }
+              }
+              else{
+                labeled_data.push({
+                  'text_id': sessionSamples[swipeCount]['text_id'],
+                  'label': map_label_string(direction)
+                });
+            }
+          }
+
+          $("#swipe").swipe( {
+            tap:function(event, target) {
+              if(!started) {
+                sessionSamples = get_samples();
+                swipeCount = 0;
+                started = true;
+                msg();
+              }
+            },
+            swipe:function(event, direction, distance, duration, fingerCount, fingerData) {
+              if(started && (direction == 'down' || direction == 'left' || direction == 'right')) {
+                tag_current_statement(direction);
+                swipeCount++;
+                msg(direction);
+              }
+            },
+            threshold:20
+          });
+        });
+
+    </script>
+
+<body>
+  <nav class="navbar navbar-expand-md bg-dark navbar-dark">
+  <!-- Brand -->
+  <a class="navbar-brand" href="#">rightornot</a>
+
+  <!-- Toggler/collapsibe Button -->
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <!-- Navbar links -->
+  <div class="collapse navbar-collapse" id="collapsibleNavbar">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link" href="#">rightornot quiz</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#">details</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#">about</a>
+      </li>
+    </ul>
+  </div>
+</nav>
+<div class="container-fluid">
+
+    <div class="row">
+        <div class="col-md-2 col-md-offset-5">
+            <div id="swipe" style="height: 320px; width: 350px; background-color: rgba(0,0,0,0.1);">
+                <div id="political_samples_box" class="text-center align-middle">
+                    <p>Wir zeigen einige politische Texte.
+                    </p>
+                    <p>Wie Du die Texte einordnest, im Vergleich zu den <a href="https://manifesto-project.wzb.eu">Manifesto Projekt</a> Annotationen, kann helfen politischen Bias zu erkennen.
+                    </p>
+                    <p>
+                      Swipe
+                    </p>
+                    <ul>
+                        <li><b>links</b> wenn Du den Text links fandest</li>
+                        <li><b>right</b> wenn Du den Text rechts fandest</li>
+                        <li><b>neutral</b> wenn Du den Text neutral fandest</li>
+                    </ul>
+                    <p>Klicke um zu starten</p>
+                </div>
+            </div>
+            </div>
+            </div>
+
+      <div class="row">
+          <div class="col-md-2 col-md-offset-5">
+            <div id="results_box" class="text-center" style="width: 350px; background-color: rgba(0,0,0,0.2);">
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
