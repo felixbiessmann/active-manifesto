@@ -85,6 +85,7 @@ def texts_and_labels():
         ]
     }
     """
+    print(request.get_data(as_text=True))
     texts_with_labels = json.loads(request.get_data(as_text=True))['data']
     text_ids = map(lambda entry: entry['text_id'], texts_with_labels)
     labels = map(lambda entry: entry['label'], texts_with_labels)
