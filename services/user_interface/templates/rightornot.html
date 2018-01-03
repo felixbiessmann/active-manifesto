@@ -7,16 +7,11 @@
 
     <title>Active Manifesto</title>
 
-    <meta name="description" content="Source code generated using layoutit.com">
-    <meta name="author" content="LayoutIt!">
-
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css">
-      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.6/umd/popper.min.js"></script>
-      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js"></script>
-
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.6/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.touchSwipe.min.js') }}"></script>
-
 </head>
 <script>
 
@@ -81,8 +76,8 @@
         labeled_data = [];
 
       } else {
-        $("#political_samples_box").html(sessionSamples[swipeCount]['statement']);
-        $("#results_box").html(`Falsch: ` + (wrong / swipeCount).toPrecision(2) + " | Bias: " + error_direction + " (" + map_left_right(error_direction) + ")" )
+        $("#political_samples_box").html(sessionSamples[swipeCount]['statement']).height(200);
+        $("#results_box").html(`Falsch: ` + (wrong / swipeCount).toPrecision(2) + " | Bias: " + error_direction + " (" + map_left_right(error_direction) + ")" ).height(30)
       }
     }
 
@@ -147,12 +142,45 @@
     });
   });
 
+function details(){
+$("#political_samples_box").html(`<h3>
+  Details zum Projekt
+</h3>
+<ul>
+    <li><b>Daten:</b> Die Daten um das Machine Learning Model zu trainieren sind vom <a href="https://manifesto-project.wzb.eu">Manifesto Projekt</a>, das sind Parteiprogramme, die von Politikwissenschaftlern annotiert wurden. Wir haben alle verfügbaren Daten von Parteien aus Deutschland genommen. </li>
+    <li><b>Machine Learning Modell:</b> Wir haben ein Lineares Modell für die Vorhersage von Labels und das Active Learning Uncertainty Ranking benutzt. Details zum Active Learning sind beschrieben <a href="https://github.com/felixbiessmann/active-manifesto/raw/master/manuscript/active-manifesto.pdf">in diesem Manuskript</a>, Details zum Modell und der Merkmalsextraktion sind  <a href="https://arxiv.org/abs/1608.02195">in diesem Manuskript</a></li>
+    <li><b>Code:</b> Der Code dieser Demo und der Experimente ist <a href="https://github.com/felixbiessmann/active-manifesto">auf github</a></li>
+</ul>`).height("auto")
+};
+
+function about(){
+$("#political_samples_box").html(`<h3>
+  Über das Projekt
+</h3>
+
+<p>
+Ziel des Projekts ist es, Bürgern zu helfen, politischen Bias zu erkennen und damit einen neutralen Blick auf Inhalte zu bewahren.
+</p>
+
+<p>
+Das rightornot Projekt trägt durch zwei Aspekte dazu bei:
+</p>
+
+<h5>Schätzung des Politische Biases:</h5>
+<p>Wie man politische Texte einordnet, kann helfen sich selbst einzuordnen: Wer alles für links hält, ist eher nicht links, und wer alles für rechts hält, ist wohl eher nicht rechts. Bei dem Quiz berechnen wir auf einigen Texten, wie stark und in welche Richtung (links/rechts) ein Nutzer von den Politikwissenschaftlern des Manifesto Projekts abweicht.</p>
+
+<h5>Annotation von Politischen Texten:</h5>
+<p> Einige der Texte sind noch nicht annotiert. Wir benutzen <a href="https://en.wikipedia.org/wiki/Active_learning_(machine_learning)">Active Learning</a> um schnell das beste Modell zu trainieren.</p>
+<p> Mit den so gewonnenen annotierten Daten können Machine Learning Modelle trainiert werden, die neue Inhalte automatisiert auf politischen Bias untersuchen können. Dies erlaubt eine Empfehlung von Inhalten entprechend des politischen Bias' von Nutzern, um sich gezielt nach anderen Meinungen zu informieren.</p>
+`).height("auto")
+};
+
 </script>
 
 <body>
   <nav class="navbar navbar-expand-md bg-dark navbar-dark">
   <!-- Brand -->
-  <a class="navbar-brand" href="#">rightornot</a>
+  <a class="navbar-brand" href="javascript:window.location.reload(true)">right or not</a>
 
   <!-- Toggler/collapsibe Button -->
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
@@ -163,23 +191,23 @@
   <div class="collapse navbar-collapse" id="collapsibleNavbar">
     <ul class="navbar-nav">
       <li class="nav-item">
-        <a class="nav-link" href="#">rightornot quiz</a>
+        <a class="nav-link" href="javascript:window.location.reload(true)">rightornot quiz</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">details</a>
+        <a class="nav-link" href="javascript:void(0);" onclick="details();">details</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#">about</a>
+        <a class="nav-link" href="javascript:void(0);" onclick="about();">about</a>
       </li>
     </ul>
   </div>
 </nav>
-<div class="container-fluid">
+<div class="container">
 
-    <div class="row">
-        <div class="col-md-2 col-md-offset-5">
-            <div id="swipe" style="height: 320px; width: 350px; background-color: rgba(0,0,0,0.1);">
-                <div id="political_samples_box" class="text-center align-middle">
+    <div class="row justify-content-around align-items-center">
+        <div class="col-9 align-items-center">
+            <div id="swipe" style="height: 80%; background-color: rgba(0,0,0,0.1);">
+                <div id="political_samples_box" class="text-center">
                     <p>Wir zeigen einige politische Texte.
                     </p>
                     <p>Wie Du die Texte einordnest, im Vergleich zu den <a href="https://manifesto-project.wzb.eu">Manifesto Projekt</a> Annotationen, kann helfen politischen Bias zu erkennen.
@@ -198,9 +226,9 @@
             </div>
             </div>
 
-      <div class="row">
-          <div class="col-md-2 col-md-offset-5">
-            <div id="results_box" class="text-center" style="width: 350px; background-color: rgba(0,0,0,0.2);">
+      <div class="row justify-content-around">
+          <div class="col-9 align-items-center">
+            <div id="results_box" class="text-center" style="background-color: rgba(0,0,0,0.2);">
             </div>
         </div>
     </div>
