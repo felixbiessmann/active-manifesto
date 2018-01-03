@@ -22,125 +22,132 @@
 
   var maxSwipes=10;
 
+  function makeHttpObject() {
+    try {return new XMLHttpRequest();}
+    catch (error) {}
+    try {return new ActiveXObject("Msxml2.XMLHTTP");}
+    catch (error) {}
+    try {return new ActiveXObject("Microsoft.XMLHTTP");}
+    catch (error) {}
+    throw new Error("Could not create HTTP request object.");
+  }
 
-        function makeHttpObject() {
-          try {return new XMLHttpRequest();}
-          catch (error) {}
-          try {return new ActiveXObject("Msxml2.XMLHTTP");}
-          catch (error) {}
-          try {return new ActiveXObject("Microsoft.XMLHTTP");}
-          catch (error) {}
-          throw new Error("Could not create HTTP request object.");
+  function get_samples() {
+      var request = makeHttpObject();
+      request.open("GET", "/get_samples?n="+maxSwipes, false);
+      request.send(null);
+      return JSON.parse(request.responseText)['data'];
+  }
+
+  $(function() {
+
+    var sessionSamples = []
+    var swipeCount=0;
+    var wrong=0;
+    var error_direction=0;
+    var started=false;
+    var labeled_data = [];
+
+    var sessionSamples = get_samples();
+
+    function msg(direction) {
+      // finished labelling round
+      if(swipeCount >= maxSwipes) {
+        $("#political_samples_box").html(
+              `
+              <p>Wir zeigen einige politische Texte. </p>
+              <p>
+              Swipe
+              <ul>
+                  <li><b>links</b> wenn Du den Text links fandest</li>
+                  <li><b>rechts</b> wenn Du den Text rechts fandest</li>
+                  <li><b>runter</b> wenn Du den Text neutral fandest</li>
+              </ul>`
+        );
+
+        data = {
+            'data': labeled_data
+        };
+        var request = makeHttpObject();
+        request.open("POST", "/user_labels", false);
+        request.setRequestHeader("Content-Type", "application/json");
+        request.send(JSON.stringify(data));
+
+        started = false;
+        sessionSamples = []
+        swipeCount=0;
+        wrong=0;
+        error_direction=0;
+        labeled_data = [];
+
+      } else {
+        $("#political_samples_box").html(sessionSamples[swipeCount]['statement']);
+        $("#results_box").html(`Falsch: ` + (wrong / swipeCount).toPrecision(2) + " | Bias: " + error_direction + " (" + map_left_right(error_direction) + ")" )
+      }
+    }
+
+    function map_left_right(direction){
+      lr = "neutral";
+      if (direction > 0) {lr = "rechts";};
+      if (direction < 0) {lr = "links";};
+      return lr
+    }
+
+    function map_label(direction) {
+      switch(direction){
+        case "left": return -1;
+        case "down": return 0;
+        case "neutral": return 0;
+        case "right": return 1;
+        default: return 0;
+      }
+    }
+
+    function map_label_string(direction) {
+      label = direction;
+      switch(direction){
+        case "down": label = "neutral";
+      }
+      return label
+    }
+
+    function tag_current_statement(direction) {
+        if (sessionSamples[swipeCount]['label'] != ""){
+          error = map_label(sessionSamples[swipeCount]['label']) - map_label(direction);
+          if (error != 0) {
+            wrong++;
+            error_direction += error;
+          }
         }
-
-        function get_samples() {
-            var request = makeHttpObject();
-            request.open("GET", "/get_samples?n="+maxSwipes, false);
-            request.send(null);
-            return JSON.parse(request.responseText)['data'];
-        }
-
-        $(function() {
-          var sessionSamples = []
-          var swipeCount=0;
-          var wrong=0;
-          var error_direction=0;
-          var started=false;
-          var labeled_data = [];
-
-          var sessionSamples = get_samples();
-
-          function msg(direction) {
-            // finished labelling round
-            if(swipeCount >= maxSwipes) {
-              $("#political_samples_box").html(
-                    `
-                    <p>Wir zeigen einige politische Texte. </p>
-                    <p>
-                    Swipe
-                    <ul>
-                        <li><b>links</b> wenn Du den Text links fandest</li>
-                        <li><b>rechts</b> wenn Du den Text rechts fandest</li>
-                        <li><b>runter</b> wenn Du den Text neutral fandest</li>
-                    </ul>`
-              );
-              started = false;
-              data = {
-                  'data': labeled_data
-              };
-              var request = makeHttpObject();
-              request.open("POST", "/user_labels", false);
-              request.setRequestHeader("Content-Type", "application/json");
-              request.send(JSON.stringify(data));
-
-            } else {
-              $("#political_samples_box").html(sessionSamples[swipeCount]['statement']);
-              $("#results_box").html(`Falsch: ` + (wrong / swipeCount).toPrecision(2) + " | Bias: " + error_direction + " (" + map_left_right(error_direction) + ")" )
-            }
-          }
-
-          function map_left_right(direction){
-            lr = "neutral";
-            if (direction > 0) {lr = "rechts";};
-            if (direction < 0) {lr = "links";};
-            return lr
-          }
-
-          function map_label(direction) {
-            switch(direction){
-              case "left": return -1;
-              case "down": return 0;
-              case "neutral": return 0;
-              case "right": return 1;
-              default: return 0;
-            }
-          }
-
-          function map_label_string(direction) {
-            label = direction;
-            switch(direction){
-              case "down": label = "neutral";
-            }
-            return label
-          }
-
-          function tag_current_statement(direction) {
-              if (sessionSamples[swipeCount]['label'] != ""){
-                error = map_label(sessionSamples[swipeCount]['label']) - map_label(direction);
-                if (error != 0) {
-                  wrong++;
-                  error_direction += error;
-                }
-              }
-              else{
-                labeled_data.push({
-                  'text_id': sessionSamples[swipeCount]['text_id'],
-                  'label': map_label_string(direction)
-                });
-            }
-          }
-
-          $("#swipe").swipe( {
-            tap:function(event, target) {
-              if(!started) {
-                sessionSamples = get_samples();
-                swipeCount = 0;
-                started = true;
-                msg();
-              }
-            },
-            swipe:function(event, direction, distance, duration, fingerCount, fingerData) {
-              if(started && (direction == 'down' || direction == 'left' || direction == 'right')) {
-                tag_current_statement(direction);
-                swipeCount++;
-                msg(direction);
-              }
-            },
-            threshold:20
+        else{
+          labeled_data.push({
+            'text_id': sessionSamples[swipeCount]['text_id'],
+            'label': map_label_string(direction)
           });
-        });
+      }
+    }
 
-    </script>
+    $("#swipe").swipe( {
+      tap:function(event, target) {
+        if(!started) {
+          sessionSamples = get_samples();
+          swipeCount = 0;
+          started = true;
+          msg();
+        }
+      },
+      swipe:function(event, direction, distance, duration, fingerCount, fingerData) {
+        if(started && (direction == 'down' || direction == 'left' || direction == 'right')) {
+          tag_current_statement(direction);
+          swipeCount++;
+          msg(direction);
+        }
+      },
+      threshold:20
+    });
+  });
+
+</script>
 
 <body>
   <nav class="navbar navbar-expand-md bg-dark navbar-dark">
@@ -182,7 +189,7 @@
                     </p>
                     <ul>
                         <li><b>links</b> wenn Du den Text links fandest</li>
-                        <li><b>right</b> wenn Du den Text rechts fandest</li>
+                        <li><b>rechts</b> wenn Du den Text rechts fandest</li>
                         <li><b>neutral</b> wenn Du den Text neutral fandest</li>
                     </ul>
                     <p>Klicke um zu starten</p>
