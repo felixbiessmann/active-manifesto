@@ -22,6 +22,7 @@ facebook = oauth.remote_app(
     authorize_url='https://www.facebook.com/dialog/oauth'
 )
 
+
 def get_fb_likes(user_name, access_token, max_likes=1000):
     '''
 
@@ -37,9 +38,11 @@ def get_fb_likes(user_name, access_token, max_likes=1000):
         all_likes += likes['data']
     return all_likes
 
+
 @app.route('/')
 def index():
     return redirect(url_for('login'))
+
 
 @app.route('/login')
 def login():

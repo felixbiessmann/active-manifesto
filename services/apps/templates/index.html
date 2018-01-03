@@ -1,16 +1,29 @@
-{% extends "layout.html" %}
-{% block body %}
+<!doctype html>
+<head>
+<title>{% block title %}Welcome{% endblock %} | Flask OAuth Example</title>
+<link rel=stylesheet type=text/css href="{{ url_for('static',
+  filename='style.css') }}">
+</head>
+<body>
+<h1>Flask OAuth Example</h1>
+<ul class=navigation>
+  <li><a href="{{ url_for('index') }}">overview</a></li>
+  {% if g.user %}
+  <li><a href="{{ url_for('logout') }}">sign out [{{ g.user.screen_name}}]</a></li>
+  {% else %}
+  <li><a href="{{ url_for('login') }}">sign in</a></li>
+  {% endif %}
+</ul>
+{% for message in get_flashed_messages() %}
+  <p class=message>{{ message }}</p>
+{% endfor %}
+{% block body %}{% endblock %}
+
   <h2>Overview</h2>
   {% if g.user %}
     <p>
-      Hello {{ g.user.screen_name }}!  Wanna tweet something?
+      Hello {{ g.user.screen_name }}!
     </p>
-    <form action="{{ url_for('tweet') }}"  method=post>
-      <p>
-        <input type=text name=tweet size=40>
-        <input type=submit value="Tweet!">
-      </p>
-    </form>
     {% if tweets %}
     <h3>Your Timeline</h3>
     <ul>
@@ -30,4 +43,5 @@
         url_for('static', filename='sign-in.png') }}" alt="sign in"></a>
     </p>
   {% endif %}
-{% endblock %}
+</body>
+</html>
