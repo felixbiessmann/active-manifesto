@@ -50,7 +50,7 @@
       if(swipeCount >= maxSwipes) {
         $("#results_box").html("")
         $("#political_samples_box").html(
-            `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% falsch eingeordnet.</p>" +
+            `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% anders eingeordnet als das Manifesto Projekt.</p>" +
             " <p> Dein Bias ist: " + map_left_right(error_direction) + "</p>" +
             `<p>Klicke um weiter zu machen. </p>`
         ).height("auto");
