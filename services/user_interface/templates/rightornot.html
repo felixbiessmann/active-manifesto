@@ -50,7 +50,7 @@
       if(swipeCount >= maxSwipes) {
         $("#results_box").html("")
         $("#political_samples_box").html(
-            `<p>Du hast ` + (wrong / (maxSwipes / 2)).toPrecision(2) + "% falsch eingeordnet.</p>" +
+            `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% falsch eingeordnet.</p>" +
             " <p> Dein Bias ist: " + map_left_right(error_direction) + "</p>" +
             `<p>Klicke um weiter zu machen. </p>`
         ).height("auto");
@@ -217,15 +217,13 @@ rightornot trägt dazu bei durch:
                 <div id="political_samples_box" class="text-center">
                     <p>Wir zeigen einige politische Texte.
                     </p>
-                    <p>Wie Du die Texte einordnest, im Vergleich zu den <a href="https://manifesto-project.wzb.eu">Manifesto Projekt</a> Annotationen, kann helfen politischen Bias zu erkennen.
-                    </p>
                     <p>
                       Swipe
                     </p>
                     <ul>
                         <li><b>links</b> wenn Du den Text links fandest</li>
+                        <li><b>runter</b> wenn Du den Text neutral fandest</li>
                         <li><b>rechts</b> wenn Du den Text rechts fandest</li>
-                        <li><b>neutral</b> wenn Du den Text neutral fandest</li>
                     </ul>
                     <p>Klicke um zu starten</p>
                 </div>
