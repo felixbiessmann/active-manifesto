@@ -7,7 +7,7 @@
 
 echo ""
 
-export WZB_API_KEY=""
+export WZB_API_KEY="9cd9104a725f26bcae04da3eed6bdd40"
 
 python data_import.py
 

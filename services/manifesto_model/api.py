@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import os
-
+import random
 import time
 import numpy as np
 import requests
@@ -85,6 +85,7 @@ def texts_and_labels():
         ]
     }
     """
+    print(request.get_data(as_text=True))
     texts_with_labels = json.loads(request.get_data(as_text=True))['data']
     text_ids = map(lambda entry: entry['text_id'], texts_with_labels)
     labels = map(lambda entry: entry['label'], texts_with_labels)
@@ -116,6 +117,41 @@ def prioritized_texts():
     texts_priotized = np.array(texts)[np.array(prios_texts)].tolist()
     # print(texts_priotized)
     return jsonify({'data': texts_priotized[:n_texts]})
+
+@app.route("/prioritized_texts_with_label", methods=['GET'])
+def prioritized_texts_with_label():
+    """
+    Retrieves all of the political statements from the database, prioritizes them with the manifesto model
+    and returns at most as many texts given in the GET parameter `n`, ordered by their uncertainty.
+
+    Half of the texts have known labels
+
+    :return: {
+        'data': [
+            {'text_id': 1, 'label': 'left'},
+            ...
+        ]
+    }
+    """
+    print("getting prioritized texts")
+    n_texts = int(request.args.get('n'))
+    texts = get_texts_only(n_all_samples)
+    prios_texts = classifier.prioritize(map(lambda t: t['statement'], texts))
+    # print(prios_texts)
+    texts_prioritized = np.array(texts)[np.array(prios_texts)].tolist()
+    to_label = texts_prioritized[:int(n_texts/2)]
+    for sample in to_label:
+        sample['label'] = ""
+
+    texts_with_labels = random.sample([sample for sample in
+        get_texts_with_labels(100, "majority")
+        if sample['label'] in ['left', 'right']], int(n_texts/2))
+
+    # print(texts_priotized)
+    result = to_label + texts_with_labels
+    random.shuffle(result)
+
+    return jsonify({'data': result})
 
 
 @app.route("/predict", methods=['POST'])

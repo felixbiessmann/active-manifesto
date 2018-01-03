@@ -36,7 +36,7 @@ def user_labels():
 def get_samples():
     n_texts = request.args.get('n')
     r = requests.get(
-        'http://manifesto_model:{}/prioritized_texts?n={}'.format(
+        'http://manifesto_model:{}/prioritized_texts_with_label?n={}'.format(
             MANIFESTO_MODEL_HTTP_PORT,
             n_texts
         )
@@ -66,6 +66,15 @@ def debug_uncertainties():
 @app.route('/viz')
 def viz():
     return render_template('viz.html')
+
+
+@app.route('/rightornot')
+def rightornot():
+    return render_template(
+        'rightornot.html',
+        # persistence_host='http://0.0.0.0:'+str(MANIFESTO_MODEL_HTTP_PORT)
+    )
+
 
 
 @app.route('/swipe')

@@ -28,6 +28,9 @@
 
 </head>
 <script>
+
+  var maxSwipes=10;
+
         function makeHttpObject() {
           try {return new XMLHttpRequest();}
           catch (error) {}
@@ -40,14 +43,16 @@
 
         function get_samples() {
             var request = makeHttpObject();
-            request.open("GET", "/get_samples?n=3", false);
+            request.open("GET", "/get_samples?n="+maxSwipes, false);
             request.send(null);
             return JSON.parse(request.responseText)['data'];
         }
 
         $(function() {
-          var maxSwipes=3;
+
           var swipeCount=0;
+          var wrong=0;
+          var error_direction=0;
           var started=false;
 
           var sessionSamples = get_samples();
@@ -82,7 +87,7 @@
               });
 
               data = {
-                  'data': user_labels
+                  'data': sessionSamples
               };
               console.log(sessionSamples);
               console.log(data);
@@ -92,18 +97,41 @@
               request.send(JSON.stringify(data));
 
             } else {
-              $("#political_samples_box").html(sessionSamples[swipeCount]['statement']);
+              $("#political_samples_box").html(sessionSamples[swipeCount]['statement'] + `wrong: ` + wrong + " error: " + error_direction );
             }
           }
 
+          function map_label(direction) {
+            switch(direction){
+              case "left": return -1;
+              case "down": return 0;
+              case "neutral": return 0;
+              case "right": return 1;
+            }
+          }
+
+          function map_label_string(direction) {
+            label = direction;
+            switch(direction){
+              case "down": label = "neutral";
+            }
+            return label
+          }
+
           function tag_current_statement(direction) {
-            sessionSamples[swipeCount]['label'] = direction;
+            error = map_label(sessionSamples[swipeCount]['label']) - map_label(direction);
+            if (error != 0) {
+              wrong++;
+              error_direction += error;
+            }
+            sessionSamples[swipeCount]['label'] = map_label_string(direction);
           }
 
           $("#swipe").swipe( {
             tap:function(event, target) {
               if(!started) {
                 sessionSamples = get_samples();
+                console.log(sessionSamples)
                 swipeCount = 0;
                 started = true;
                 msg();
