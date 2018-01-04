@@ -42,12 +42,13 @@ def before_request():
 def index():
     tweets = None
     if g.user is not None:
-        resp = twitter.request('statuses/home_timeline.json')
+        resp = twitter.request('statuses/home_timeline.json?count=100')
         if resp.status == 200:
             tweets = resp.data
         else:
             flash('Unable to load tweets from Twitter.')
     return render_template('index.html', tweets=tweets)
+
 
 @app.route('/search', methods=['GET'])
 def search():
@@ -70,27 +71,29 @@ def search():
     ]
     return '<br><br>'.join(tweets)
 
-@app.route('/tweet', methods=['POST'])
-def tweet():
-    if g.user is None:
-        return redirect(url_for('login', next=request.url))
-    status = request.form['tweet']
-    if not status:
-        return redirect(url_for('index'))
-    resp = twitter.post('statuses/update.json', data={
-        'status': status
-    })
 
-    if resp.status == 403:
-        flash("Error: #%d, %s " % (
-            resp.data.get('errors')[0].get('code'),
-            resp.data.get('errors')[0].get('message'))
-        )
-    elif resp.status == 401:
-        flash('Authorization error with Twitter.')
-    else:
-        flash('Successfully tweeted your tweet (ID: #%s)' % resp.data['id'])
-    return redirect(url_for('index'))
+# tweeting not needed
+# @app.route('/tweet', methods=['POST'])
+# def tweet():
+#     if g.user is None:
+#         return redirect(url_for('login', next=request.url))
+#     status = request.form['tweet']
+#     if not status:
+#         return redirect(url_for('index'))
+#     resp = twitter.post('statuses/update.json', data={
+#         'status': status
+#     })
+#
+#     if resp.status == 403:
+#         flash("Error: #%d, %s " % (
+#             resp.data.get('errors')[0].get('code'),
+#             resp.data.get('errors')[0].get('message'))
+#         )
+#     elif resp.status == 401:
+#         flash('Authorization error with Twitter.')
+#     else:
+#         flash('Successfully tweeted your tweet (ID: #%s)' % resp.data['id'])
+#     return redirect(url_for('index'))
 
 
 @app.route('/login')

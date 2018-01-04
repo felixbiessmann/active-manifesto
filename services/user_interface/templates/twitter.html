@@ -5,13 +5,13 @@
   filename='style.css') }}">
 </head>
 <body>
-<h1>Flask OAuth Example</h1>
+<h1>Active Manifesto twitter-integration</h1>
 <ul class=navigation>
-  <li><a href="{{ url_for('index') }}">overview</a></li>
+  <li><a href="{{ url_for('twitter_index') }}">overview</a></li>
   {% if g.user %}
-  <li><a href="{{ url_for('logout') }}">sign out [{{ g.user.screen_name}}]</a></li>
+  <li><a href="{{ url_for('twitter_logout') }}">sign out [{{ g.user.screen_name}}]</a></li>
   {% else %}
-  <li><a href="{{ url_for('login') }}">sign in</a></li>
+  <li><a href="{{ url_for('twitter_login') }}">sign in</a></li>
   {% endif %}
 </ul>
 {% for message in get_flashed_messages() %}
@@ -28,18 +28,16 @@
     <h3>Your Timeline</h3>
     <ul>
     {% for tweet in tweets %}
-      <li><a href="http://twitter.com/{{ tweet.user.screen_name
-        }}">{{ tweet.user.screen_name }}</a>: {{ tweet.text|urlize }}</li>
+      <li><b>Model labels: {{ tweet.labels }}</b>. <a href="http://twitter.com/{{ tweet.user.screen_name }}">{{ tweet.user.screen_name }}</a>: {{ tweet.text|urlize }}</li>
     {% endfor %}
     </ul>
     {% endif %}
   {% else %}
     <p>
-      Sign in to view your public timeline and to tweet from this
-      example application.
+      Sign in to view your public timeline with political bias estimations.
     </p>
     <p>
-      <a href="{{ url_for('login') }}"><img src="{{
+      <a href="{{ url_for('twitter_login') }}"><img src="{{
         url_for('static', filename='sign-in.png') }}" alt="sign in"></a>
     </p>
   {% endif %}

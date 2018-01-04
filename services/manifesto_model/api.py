@@ -159,11 +159,7 @@ def predict():
     req = json.loads(request.get_data(as_text=True))
     print('model/predict parsed', req)
     text = req['text']
-    req['proba'] = False
-    if req['proba']:
-        result = classifier.clf.predict_proba([text])[0].tolist()
-    else:
-        result = classifier.predict([text])
+    result = classifier.predict([text])
     print('result', result)
     return jsonify({'prediction': result})
 

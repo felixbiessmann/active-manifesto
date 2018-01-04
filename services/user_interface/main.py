@@ -4,7 +4,11 @@ import json
 import os
 import requests
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, jsonify
+from flask import redirect, render_template
+from flask import g, session, request, url_for, flash
+from flask_oauthlib.client import OAuth
+
 
 app = Flask(__name__)
 app.debug = True
@@ -13,7 +17,99 @@ app.secret_key = 'development'
 MANIFESTO_MODEL_HTTP_PORT = os.environ.get('MANIFESTO_MODEL_HTTP_PORT')
 HTTP_PORT = int(os.environ.get('HTTP_PORT'))
 
+# twitter oauth and endpoint configuration
+oauth = OAuth(app)
+twitter = oauth.remote_app(
+    'Active Manifesto twitter-integration',
+    consumer_key='xBeXxg9lyElUgwZT6AZ0A',
+    consumer_secret='aawnSpNTOVuDCjx7HMh6uSXetjNN8zWLpZwCEU4LBrk',
+    base_url='https://api.twitter.com/1.1/',
+    request_token_url='https://api.twitter.com/oauth/request_token',
+    access_token_url='https://api.twitter.com/oauth/access_token',
+    authorize_url='https://api.twitter.com/oauth/authorize'
+)
 
+
+@twitter.tokengetter
+def get_twitter_token():
+    if 'twitter_oauth' in session:
+        resp = session['twitter_oauth']
+        return resp['oauth_token'], resp['oauth_token_secret']
+
+
+@app.before_request
+def before_request():
+    g.user = None
+    if 'twitter_oauth' in session:
+        g.user = session['twitter_oauth']
+
+
+@app.route('/twitter')
+def twitter_index():
+
+    def add_political_direction_to(tweets):
+        url = 'http://manifesto_model:{}/predict'.format(MANIFESTO_MODEL_HTTP_PORT)
+        for tweet in tweets:
+            tweet['labels'] = requests.post(url=url, json={'text': tweet['text']}).json()['prediction']
+        pass
+
+    tweets = None
+    if g.user is not None:
+        resp = twitter.request('statuses/home_timeline.json?count=10')  # todo: make configurable
+        if resp.status == 200:
+            tweets = resp.data
+            add_political_direction_to(tweets)
+        else:
+            print(resp.raw_data)
+            flash('Unable to load tweets from Twitter.')
+    return render_template('twitter.html', tweets=tweets)
+
+
+@app.route('/search', methods=['GET'])
+def search():
+    """
+    use this endpoint to get most popular query tweets with some additional stats.
+
+    e.g.: http://localhost:5000/search?q=tagesschau
+    :return:
+    """
+    q = urllib.parse.quote(request.args.get('q'))
+    # https://developer.twitter.com/en/docs/tweets/search/api-reference/get-search-tweets.html
+    a = twitter.get('search/tweets.json?q={}&locale=en-US&result_type=popular&count=100'.format(q))
+    tweets = [
+        "{user_name}({n_followers}) - {tweet} - {n_retweets}".format(
+            user_name=status['user']['name'],
+            n_followers=status['user']['followers_count'],
+            n_retweets=status['retweet_count'],
+            tweet=status['text']
+        ) for status in a.data['statuses']
+    ]
+    return '<br><br>'.join(tweets)
+
+
+@app.route('/twitter/login')
+def twitter_login():
+    callback_url = url_for('twitter_oauthorized', next=request.args.get('next'))
+    return twitter.authorize(callback=callback_url or request.referrer or None)
+
+
+@app.route('/twitter/logout')
+def twitter_logout():
+    session.pop('twitter_oauth', None)
+    return redirect(url_for('twitter_index'))
+
+
+@app.route('/twitter/oauthorized')
+def twitter_oauthorized():
+    resp = twitter.authorized_response()
+    if resp is None:
+        flash('You denied the request to sign in.')
+    else:
+        session['twitter_oauth'] = resp
+    return redirect(url_for('twitter_index'))
+
+
+# labeling and prediction routes
 @app.route('/user_labels', methods=['POST'])
 def user_labels():
     """
@@ -70,27 +166,17 @@ def viz():
 
 @app.route('/rightornot')
 def rightornot():
-    return render_template(
-        'rightornot.html',
-        # persistence_host='http://0.0.0.0:'+str(MANIFESTO_MODEL_HTTP_PORT)
-    )
-
+    return render_template('rightornot.html')
 
 
 @app.route('/swipe')
 def swipe():
-    return render_template(
-        'swipe.html',
-        # persistence_host='http://0.0.0.0:'+str(MANIFESTO_MODEL_HTTP_PORT)
-    )
+    return render_template('swipe.html')
 
 
 @app.route('/')
 def index():
-    return render_template(
-        'index.html',
-        # persistence_host='http://0.0.0.0:'+str(MANIFESTO_MODEL_HTTP_PORT)
-    )
+    return render_template('index.html')
 
 
 if __name__ == '__main__':
