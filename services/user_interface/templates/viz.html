@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
 
     <title>Active Manifesto</title>
-
-    <meta name="description" content="Source code generated using layoutit.com">
-    <meta name="author" content="LayoutIt!">
 
     <script
             src="https://code.jquery.com/jquery-3.2.1.min.js"
@@ -27,7 +27,6 @@
 
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
-</head>
 <script>
     function makeHttpObject() {
         try {return new XMLHttpRequest();}
@@ -164,17 +163,53 @@ $( document ).ready(function() {
 });
 
 </script>
+</head>
 
 <body>
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12">
-            <h1 class="text-center">
-                Active Manifesto
-            </h1>
-        </div>
-    </div>
-    <div class="row">
+
+<div class="container">
+
+    <!-- Static navbar -->
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                        aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">Active Manifesto</a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <!--<li class="active"><a href="#">Home</a></li>-->
+                    <li><a href="{{ url_for('index') }}">Home</a></li>
+                    <li><a href="{{ url_for('swipe') }}">Swipe</a></li>
+                    <li><a href="{{ url_for('viz') }}">Viz</a></li>
+                    <li><a href="{{ url_for('rightornot') }}">Right Or Not</a></li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                           aria-expanded="false">Twitter <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{{ url_for('twitter_index') }}">Home</a></li>
+                            <li><a href="{{ url_for('twitter_login') }}">Login</a></li>
+                            <li><a href="{{ url_for('twitter_logout') }}">Logout</a></li>
+                            <!--<li role="separator" class="divider"></li>-->
+                            <!--<li class="dropdown-header">Nav header</li>-->
+                            <!--<li><a href="#">Separated link</a></li>-->
+                            <!--<li><a href="#">One more separated link</a></li>-->
+                        </ul>
+                    </li>
+                </ul>
+                <!--</ul>-->
+            </div><!--/.nav-collapse -->
+        </div><!--/.container-fluid -->
+    </nav>
+
+    <!-- Main component for a primary marketing message or call to action -->
+    <div class="jumbotron">
         <div class="col-md-4">
             <div>
                 Textanalysis - type to see query association
@@ -182,7 +217,6 @@ $( document ).ready(function() {
             <input id="query_input" type="text" value="">
             <div id="bar" style="height: 500px; width: 500px; background-color: rgba(0,0,0,0.1);"></div>
         </div>
-
         <div class="col-md-4">
             <div id="corpus_uncertainties_box" style="height: 500px; width: 500px; background-color: rgba(0,0,0,0.1);"></div>
         </div>
@@ -190,6 +224,8 @@ $( document ).ready(function() {
             <div id="corpus_uncertainties_hist" style="height: 500px; width: 500px; background-color: rgba(0,0,0,0.1);"></div>
         </div>
     </div>
-</div>
+
+</div> <!-- /container -->
+
 </body>
 </html>
