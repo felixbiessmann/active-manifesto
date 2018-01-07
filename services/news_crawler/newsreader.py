@@ -8,6 +8,10 @@ import readability
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import PCA
+
+STOPWORDS = [x.strip() for x in open('stopwords.txt').readlines()[6:]]
 
 class NewsReader(object):
     def __init__(self, sources=['nachrichtenleicht', 'spiegel', 'faz', 'welt', 'zeit']):
@@ -16,6 +20,27 @@ class NewsReader(object):
         implemented
         """
         self.sources = sources
+
+    @staticmethod
+    def get_topics(texts, n_topics=5):
+        """
+        Runs some topic modelling on text database
+        INPUT:
+        texts   iterable of texts
+        n_topics    number of topics
+        RETURNS
+        assignments topic assignments for texts
+        topics  list of (topic-string, variance_explained)
+        """
+        vect = CountVectorizer(stop_words=STOPWORDS).fit(texts)
+        idx2word = {idx:w for w,idx in vect.vocabulary_.items()}
+        X = vect.transform(texts)
+        pca = PCA().fit(X.toarray())
+        sim = pca.components_[:n_topics,:].dot(X.T.toarray())
+        topics = [texts[c_idx] for c_idx in sim.argmax(axis=1).flatten()]
+        assignments = pca.transform(X.toarray()).argmax(axis=1)
+
+        return assignments, zip(topics,pca.explained_variance_ratio_)
 
     @staticmethod
     def fetch_url(url):
@@ -88,12 +113,21 @@ class NewsReader(object):
             for url in urls:
                 try:
                     title, text = NewsReader.fetch_url(url)
-                    articles.append({'title': title, 'text': text})
+                    articles.append(
+                        {   'title': title,
+                            'text': text,
+                            'source': source,
+                            'url': url
+                            })
                 except:
                     print('Could not get text from %s' % url)
                     pass
 
-        return articles
+            topic_assignments, topics = self.get_topics([x['title'] for x in articles])
+            for article, topic_assignment in zip(articles,topic_assignments):
+                article['topic'] = topic_assignment
+
+        return articles, topics
 
 
 def fetch_news():
