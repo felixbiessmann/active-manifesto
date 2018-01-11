@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 import urllib.request
-
 import os
-
-import apscheduler.schedulers.background
 import readability
 from bs4 import BeautifulSoup
-from pymongo import MongoClient
 
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import PCA
@@ -14,12 +10,17 @@ from sklearn.decomposition import PCA
 STOPWORDS = [x.strip() for x in open('stopwords.txt').readlines()[6:]]
 
 class NewsReader(object):
-    def __init__(self, sources=['nachrichtenleicht', 'spiegel', 'faz', 'welt', 'zeit']):
+    def __init__(self,
+        sources=['nachrichtenleicht', 'spiegel', 'faz', 'welt', 'zeit'],
+        n_topics=5):
         """
         :param sources: a list of strings for each newspaper for which a crawl is
         implemented
         """
         self.sources = sources
+        self.articles = []
+        self.topics = []
+        self.n_topics = n_topics
 
     @staticmethod
     def get_topics(texts, n_topics=5):
@@ -54,7 +55,7 @@ class NewsReader(object):
         text = BeautifulSoup(readable_article).get_text()
         return title, text
 
-    def get_news(self):
+    def fetch_news(self):
         """
         Collects all news articles from political ressort of major German newspapers
         and returns a list of tuples of (title, article_text).
@@ -123,30 +124,9 @@ class NewsReader(object):
                     print('Could not get text from %s' % url)
                     pass
 
-            topic_assignments, topics = self.get_topics([x['title'] for x in articles])
+            topic_assignments, topics = self.get_topics([x['title'] for x in articles], self.n_topics)
             for article, topic_assignment in zip(articles,topic_assignments):
                 article['topic'] = topic_assignment
 
-        return articles, topics
-
-
-def fetch_news():
-    reader = NewsReader(sources=['spiegel'])
-
-    persistence = MongoClient()
-
-    db = persistence['test-database']
-    col = db['articles']
-    col.delete_many({})
-    col.insert_many(reader.get_news())
-
-
-if __name__ == "__main__":
-    os.system("mongod&")  # fixme: quick hack to make mongod run
-
-    # the scheduler is the only piece of code this container is running
-    # so using blocking scheduler is ok.
-    scheduler = apscheduler.schedulers.background.BlockingScheduler()
-    # fixme: increase the interval for production
-    scheduler.add_job(fetch_news, 'interval', minutes=1)
-    scheduler.start()
+            self.articles = articles
+            self.topics = topics
