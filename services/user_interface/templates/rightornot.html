@@ -15,7 +15,7 @@
 </head>
 <script>
 
-  var maxSwipes=10;
+  var maxSwipes=6;
 
   function makeHttpObject() {
     try {return new XMLHttpRequest();}
@@ -34,6 +34,20 @@
       return JSON.parse(request.responseText)['data'];
   }
 
+  function get_news(bias) {
+      var request = makeHttpObject();
+      request.open("GET", "/get_news?bias="+bias, false);
+      request.send(null);
+      return JSON.parse(request.responseText);
+  }
+
+  function get_topics() {
+      var request = makeHttpObject();
+      request.open("GET", "/get_topics", false);
+      request.send(null);
+      return JSON.parse(request.responseText);
+  }
+
   $(function() {
 
     var sessionSamples = []
@@ -48,7 +62,7 @@
     function msg(direction) {
       // finished labelling round
       if(swipeCount >= maxSwipes) {
-        $("#results_box").html("")
+
         $("#political_samples_box").html(
             `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% anders eingeordnet als das Manifesto Projekt.</p>" +
             " <p> Dein Bias ist: " + map_left_right(error_direction) + "</p>" +
@@ -62,6 +76,16 @@
         request.open("POST", "/user_labels", false);
         request.setRequestHeader("Content-Type", "application/json");
         request.send(JSON.stringify(data));
+
+        var news_html = get_news(map_left_right_en(-error_direction))
+                          .map(function(article){
+                            return `<div class="row"><a href=`
+                              + article.url + `>` + article.title  + `</a>`
+                              + " ("+article.source+`)</div>` }).join(" ");
+
+        $("#results_box").html(
+          `<div class=container><h3>Hier ein paar Nachrichten von ` + map_left_right(-error_direction) +`</h3>`
+          + news_html + `</div>`).height("auto")
 
         started = false;
         sessionSamples = []
@@ -80,6 +104,14 @@
       lr = "neutral";
       if (direction > 0) {lr = "rechts";};
       if (direction < 0) {lr = "links";};
+      return lr
+    }
+
+    function map_left_right_en(direction){
+      lr = "neutral";
+      console.log(direction)
+      if (direction > 0) {lr = "right";};
+      if (direction < 0) {lr = "left";};
       return lr
     }
 

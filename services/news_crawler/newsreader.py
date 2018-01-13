@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 import urllib.request
+import requests
 import os
 import readability
 from bs4 import BeautifulSoup
+import warnings
 
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import PCA
 
 STOPWORDS = [x.strip() for x in open('stopwords.txt').readlines()[6:]]
+MANIFESTO_MODEL_HTTP_PORT = os.environ.get('MANIFESTO_MODEL_HTTP_PORT')
+MANIFESTO_URL = 'http://manifesto_model:{}/predict'.format(MANIFESTO_MODEL_HTTP_PORT)
 
 class NewsReader(object):
     def __init__(self,
@@ -39,9 +43,9 @@ class NewsReader(object):
         pca = PCA().fit(X.toarray())
         sim = pca.components_[:n_topics,:].dot(X.T.toarray())
         topics = [texts[c_idx] for c_idx in sim.argmax(axis=1).flatten()]
-        assignments = pca.transform(X.toarray()).argmax(axis=1)
+        assignments = pca.transform(X.toarray()).argmax(axis=1).astype(int).tolist()
 
-        return assignments, zip(topics,pca.explained_variance_ratio_)
+        return assignments, list(zip(topics,pca.explained_variance_ratio_))
 
     @staticmethod
     def fetch_url(url):
@@ -52,7 +56,7 @@ class NewsReader(object):
         readable_html = readability.Document(html)
         readable_article = readable_html.summary()
         title = readable_html.short_title()
-        text = BeautifulSoup(readable_article).get_text()
+        text = BeautifulSoup(readable_article, "lxml").get_text()
         return title, text
 
     def fetch_news(self):
@@ -114,11 +118,14 @@ class NewsReader(object):
             for url in urls:
                 try:
                     title, text = NewsReader.fetch_url(url)
+                    label = requests.post(url=MANIFESTO_URL,
+                        json={'text': text}).json()['prediction']
                     articles.append(
                         {   'title': title,
                             'text': text,
                             'source': source,
-                            'url': url
+                            'url': url,
+                            'label': label
                             })
                 except:
                     print('Could not get text from %s' % url)
@@ -126,7 +133,7 @@ class NewsReader(object):
 
             topic_assignments, topics = self.get_topics([x['title'] for x in articles], self.n_topics)
             for article, topic_assignment in zip(articles,topic_assignments):
-                article['topic'] = topic_assignment
+                article['topic'] = int(topic_assignment)
 
             self.articles = articles
             self.topics = topics
