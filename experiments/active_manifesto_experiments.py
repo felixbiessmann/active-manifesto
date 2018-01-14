@@ -277,15 +277,19 @@ def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
     df = pd.read_csv(fn)
     pylab.figure(figsize=(12,6))
     seaborn.set(font_scale=2)
-    seaborn.tsplot(
-        time="percentage_samples",
-        value="score",
-        condition="strategy",
-        unit="repetition",
-        err_style="ci_bars",
-        ci=[.05,95],
-        lw=2,
-        data=df, estimator=np.median)
+    seaborn.set_style('whitegrid')
+    pylab.hold('all')
+    linestyles = zip(df.strategy.unique(),[':','-.','--','-'])
+    for strategy,linestyle in linestyles:
+        axes = seaborn.tsplot(
+            time="percentage_samples",
+            value="score",
+            condition="strategy",
+            unit="repetition",
+            err_style="ci_bars",
+            ci=[.05,95],
+            lw=2,
+            data=df[df.strategy==strategy], estimator=np.median, linestyle=linestyle, color='black')
     pylab.title('Active Sampling Strategy Comparison')
     pylab.xlim([19,101])
     pylab.ylim([0.39,0.54])
