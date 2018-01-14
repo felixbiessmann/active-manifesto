@@ -48,17 +48,14 @@
       return JSON.parse(request.responseText);
   }
 
-  // $( document ).ready(function() {
+  var sessionSamples = []
+  var swipeCount=0;
+  var wrong=0;
+  var error_direction=0;
+  var started=false;
+  var labeled_data = [];
 
-    var sessionSamples = []
-    var swipeCount=0;
-    var wrong=0;
-    var error_direction=0;
-    var started=false;
-    var labeled_data = [];
-
-    var sessionSamples = get_samples();
-  // });
+  var sessionSamples = get_samples();
 
   $(function() {
 
@@ -67,8 +64,8 @@
       if(swipeCount >= maxSwipes) {
 
         $("#political_samples_box").html(
-            `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% anders eingeordnet als das Manifesto Projekt.</p>" +
-            " <h5> Dein Bias ist: " + map_left_right(error_direction) + "</h5>"
+            " <h5> Dein Bias ist: " + map_left_right(error_direction) + "</h5>" +
+            `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% anders eingeordnet als das Manifesto Projekt.</p>"
         ).height("auto");
 
         data = {
@@ -244,7 +241,7 @@ rightornot trägt dazu bei durch:
 <div class="container">
 
     <div class="row justify-content-around align-items-center">
-        <div class="col-9 align-items-center">
+        <div class="col">
 
             <div id="swipe" style="height: 80%; background-color: rgba(0,0,0,0.1);">
                 <div id="political_samples_box" class="text-center">
@@ -265,7 +262,7 @@ rightornot trägt dazu bei durch:
             </div>
 
       <div class="row justify-content-around  align-items-center">
-          <div class="col-9 align-items-center">
+          <div class="col">
             <div id="results_box" class="text-center" style="background-color: rgba(0,0,0,0.2);">
             </div>
         </div>
