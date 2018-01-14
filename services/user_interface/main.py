@@ -3,6 +3,7 @@
 import json
 import os
 import requests
+import random
 
 from flask import Flask, jsonify
 from flask import redirect, render_template
@@ -152,10 +153,11 @@ def get_topics_and_news():
         )
     ).json()
 
+    # for diversity of articles and reduction of visual noise, choose 1 article
     for topic_idx, topic in enumerate(topics):
         topic['articles'] = [ article for article in news
                                 if article['topic'] == topic_idx ]
-
+    topics = [random.choice(topic['articles']) for topic in topics if len(topic['articles']) > 0]
     return json.dumps(topics)
 
 @app.route('/get_topics')
@@ -176,14 +178,15 @@ def get_topics():
     return json.dumps(r.json())
 
 @app.route('/get_news')
-def get_news():
+def get_news(n=5):
     r = requests.get(
         'http://news_crawler:{}/get_news?bias={}'.format(
             NEWS_CRAWLER_HTTP_PORT,
             request.args.get('bias', default="")
         )
     )
-    return json.dumps(r.json())
+    n = int(request.args.get('n', default=n))
+    return json.dumps(r.json()[:n])
 
 @app.route('/get_samples')
 def get_samples():

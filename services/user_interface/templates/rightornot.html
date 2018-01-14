@@ -15,7 +15,7 @@
 </head>
 <script>
 
-  var maxSwipes=6;
+  var maxSwipes=10;
 
   function makeHttpObject() {
     try {return new XMLHttpRequest();}
@@ -48,7 +48,7 @@
       return JSON.parse(request.responseText);
   }
 
-  $(function() {
+  // $( document ).ready(function() {
 
     var sessionSamples = []
     var swipeCount=0;
@@ -58,6 +58,9 @@
     var labeled_data = [];
 
     var sessionSamples = get_samples();
+  // });
+
+  $(function() {
 
     function msg(direction) {
       // finished labelling round
@@ -65,8 +68,7 @@
 
         $("#political_samples_box").html(
             `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% anders eingeordnet als das Manifesto Projekt.</p>" +
-            " <p> Dein Bias ist: " + map_left_right(error_direction) + "</p>" +
-            `<p>Klicke um weiter zu machen. </p>`
+            " <h5> Dein Bias ist: " + map_left_right(error_direction) + "</h5>"
         ).height("auto");
 
         data = {
@@ -77,22 +79,26 @@
         request.setRequestHeader("Content-Type", "application/json");
         request.send(JSON.stringify(data));
 
-        var news_html = get_news(map_left_right_en(-error_direction))
-                          .map(function(article){
-                            return `<div class="row"><a href=`
-                              + article.url + `>` + article.title  + `</a>`
-                              + " ("+article.source+`)</div>` }).join(" ");
+        var news = get_news(map_left_right_en(-error_direction));
 
-        $("#results_box").html(
-          `<div class=container><h3>Hier ein paar Nachrichten von ` + map_left_right(-error_direction) +`</h3>`
-          + news_html + `</div>`).height("auto")
+        if (news.length > 0) {
+          var news_html = news.map(function(article){
+                              return `<div class="row align-items-center">
+                              <div class=col align-self-center><a href=`
+                                + article.url + `>` + article.title  + `</a>`
+                                + "  ("+article.source+`)</div></div>` }).join(" ");
 
+          $("#results_box").html(
+            `<div class=container><h5>Hier ein paar Nachrichten von ` + map_left_right(-error_direction) +`</h5>`
+            + news_html + `</div>`).height("auto")
+        }
         started = false;
         sessionSamples = []
         swipeCount=0;
         wrong=0;
         error_direction=0;
         labeled_data = [];
+        sessionSamples = get_samples();
 
       } else {
         $("#political_samples_box").html(sessionSamples[swipeCount]['statement']).height(200);
@@ -109,7 +115,6 @@
 
     function map_left_right_en(direction){
       lr = "neutral";
-      console.log(direction)
       if (direction > 0) {lr = "right";};
       if (direction < 0) {lr = "left";};
       return lr
@@ -152,8 +157,6 @@
     $("#swipe").swipe( {
       tap:function(event, target) {
         if(!started) {
-          sessionSamples = get_samples();
-          swipeCount = 0;
           started = true;
           msg();
         }
@@ -237,6 +240,7 @@ rightornot trägt dazu bei durch:
     </ul>
   </div>
 </nav>
+<div class="jumbotron">
 <div class="container">
 
     <div class="row justify-content-around align-items-center">
@@ -260,13 +264,14 @@ rightornot trägt dazu bei durch:
             </div>
             </div>
 
-      <div class="row justify-content-around">
+      <div class="row justify-content-around  align-items-center">
           <div class="col-9 align-items-center">
             <div id="results_box" class="text-center" style="background-color: rgba(0,0,0,0.2);">
             </div>
         </div>
     </div>
 
+</div>
 </div>
 </body>
 </html>
