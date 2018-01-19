@@ -45,10 +45,10 @@
  % start of an individual contribution
 
 % first the title is needed
-\title{Speeding up the manifesto project: Active learning strategies for efficient automated political annotations}
+\title{Speeding up the Manifesto Project: Active learning strategies for efficient automated political annotations}
 
 % a short form should be given in case it is too long for the running head
-\title{Speeding up the manifesto project: \\ Active learning strategies for \\efficient automated political annotations}
+\title{Speeding up the Manifesto Project: \\ Active learning strategies for \\efficient automated political annotations}
 
 % the name(s) of the author(s) follow(s) next
 %
@@ -117,7 +117,7 @@ Throughout the last years automated content analyses for political texts have be
 The work closest related to this study is using machine learning classification models to identify political affiliation or bias on political speeches or manifesto data. In \cite{Yu2008} the authors extracted BOW feature vectors and applied linear classifiers to predict political party affiliation of US congress speeches. Similar work in \cite{Hirst2014} uses data from the Canadian parliament and the European parliament. 
 Other work has focused on developing largely unsupervised methods for predicting political bias. Two popular methods are WordFish \cite{Slapin08ascaling} and WordScores \cite{Laver2003}, or improved versions thereof, see e.g. \cite{Lowe09scalingpolicy}. These approaches have been very valuable for {\em a posteriori} analysis of historical data but they do not seem to be used as much for analyses of new data in a predictive analytics setting. 
 
-Taken together, there is a large body of literature on automated analysis of political texts. Except for few exceptions most previous work has focused on binary classification or on assignment of a one dimensional policy position (often corresponding to left vs right). Data sets such as the manifesto project allow for more fine grained analyses of political bias. Models trained on such data can give valuable insights in political texts in a predictive setting see e.g. \cite{Merz2016,Biessmann16}. While data set as the manifesto project allow to train classifiers that can give more detailed insight into political bias, they also impose a significant effort on the annotators. 
+Taken together, there is a large body of literature on automated analysis of political texts. Except for few exceptions most previous work has focused on binary classification or on assignment of a one dimensional policy position (often corresponding to left vs right). Data sets such as the Manifesto Project allow for more fine grained analyses of political bias. Models trained on such data can give valuable insights in political texts in a predictive setting see e.g. \cite{Merz2016,Biessmann16}. This more detailed insight into political bias however requires significantly more effort from the annotators compared to simpler annotation schemes. 
 
 Despite the challenges associated with acquiring annotated data for training automated political analysis models, to the best of our knowledge there is no work that tries to leverage active learning strategies for speeding up the label acquisition process in the context of political annotations. While this could be due to the fact that many annotation efforts aim at an exhaustive annotation of the entire data set and thus would not profit from an active learning approach, we argue that there are many scenarios, as outlined in \autoref{sec:intro}, that suffer from the problem of a limited annotation budget and thus can profit from active learning.
 
