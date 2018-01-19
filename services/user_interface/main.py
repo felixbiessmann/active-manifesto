@@ -3,6 +3,7 @@
 import json
 import os
 import requests
+import random
 
 from flask import Flask, jsonify
 from flask import redirect, render_template
@@ -15,6 +16,7 @@ app.debug = True
 app.secret_key = 'development'
 
 MANIFESTO_MODEL_HTTP_PORT = os.environ.get('MANIFESTO_MODEL_HTTP_PORT')
+NEWS_CRAWLER_HTTP_PORT = os.environ.get('NEWS_CRAWLER_HTTP_PORT')
 HTTP_PORT = int(os.environ.get('HTTP_PORT'))
 
 # twitter oauth and endpoint configuration
@@ -127,6 +129,64 @@ def user_labels():
     print(r.json())
     return '{}'
 
+@app.route('/get_topics_and_news')
+def get_topics_and_news():
+    """
+    use this endpoint to get news topics.
+
+    e.g.: http://localhost:5000/get_topics_and_news?n=5&bias=left
+    :return:
+    """
+    n_topics = int(request.args.get('n', default=5))
+    bias = request.args.get('bias', default="")
+    topics = requests.get(
+        'http://news_crawler:{}/get_topics?n={}'.format(
+            NEWS_CRAWLER_HTTP_PORT,
+            n_topics
+        )
+    ).json()
+
+    news = requests.get(
+        'http://news_crawler:{}/get_news?bias={}'.format(
+            NEWS_CRAWLER_HTTP_PORT,
+            request.args.get('bias', default="")
+        )
+    ).json()
+
+    # for diversity of articles and reduction of visual noise, choose 1 article
+    for topic_idx, topic in enumerate(topics):
+        topic['articles'] = [ article for article in news
+                                if article['topic'] == topic_idx ]
+    topics = [random.choice(topic['articles']) for topic in topics if len(topic['articles']) > 0]
+    return json.dumps(topics)
+
+@app.route('/get_topics')
+def get_topics():
+    """
+    use this endpoint to get news topics.
+
+    e.g.: http://localhost:5000/get_topics?n=5
+    :return:
+    """
+    n_topics = int(request.args.get('n', default=5))
+    r = requests.get(
+        'http://news_crawler:{}/get_topics?n={}'.format(
+            NEWS_CRAWLER_HTTP_PORT,
+            n_topics
+        )
+    )
+    return json.dumps(r.json())
+
+@app.route('/get_news')
+def get_news(n=5):
+    r = requests.get(
+        'http://news_crawler:{}/get_news?bias={}'.format(
+            NEWS_CRAWLER_HTTP_PORT,
+            request.args.get('bias', default="")
+        )
+    )
+    n = int(request.args.get('n', default=n))
+    return json.dumps(r.json()[:n])
 
 @app.route('/get_samples')
 def get_samples():
