@@ -43,7 +43,7 @@ def model_selection(X,y):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         # TODO: pipeline parameters (hashing vectorizer dimensionalities etc.) should also be searchable here
-        text_clf = SGDClassifier(loss="log")
+        text_clf = SGDClassifier(loss="log", max_iter=10)
         parameters = {'alpha': (np.logspace(-6,-3,6)).tolist()}
         # perform gridsearch to get the best regularizer
         gs_clf = GridSearchCV(text_clf, parameters, cv=2, n_jobs=-1,verbose=1)
@@ -103,19 +103,29 @@ def smooth_probas(label_probas, eps = 1e-9):
     # smoothing probabilities to avoid infs
     return np.minimum(label_probas + eps, 1.)
 
-def prioritize_samples(label_probas, strategy="margin_sampling"):
+def prioritize_samples(label_probas, strategy="margin_sampling", include=[]):
     '''
     Some sampling strategies as in Settles' 2010 Tech Report
     '''
-    if strategy == "entropy_sampling":
-        entropy = -(label_probas * np.log(label_probas)).sum(axis=1)
-        priorities = entropy.argsort()[::-1]
-    elif strategy == "margin_sampling":
-        label_probas.sort(axis=1)
-        priorities = (label_probas[:,-1] - label_probas[:,-2]).argsort()
-    elif strategy == "uncertainty_sampling":
-        uncertainty_sampling = 1 - label_probas.max(axis=1)
-        priorities = uncertainty_sampling.argsort()[::-1]
+    if len(include) > 0:
+        exclude = list(set(range(label_probas.shape[-1]))-set(include))
+        excluded_max = label_probas[:, exclude].max(axis=1)
+        included = label_probas[:, include]
+        included.sort(axis=1)
+        included_margin = np.diff(included,axis=1)[:,-1]
+        priorities = (included_margin + excluded_max).argsort()
+    else:
+        if strategy == "entropy_sampling":
+            entropy = -(label_probas * np.log(label_probas)).sum(axis=1)
+            priorities = entropy.argsort()[::-1]
+        elif strategy == "margin_sampling":
+            label_probas.sort(axis=1)
+            priorities = (label_probas[:,-1] - label_probas[:,-2]).argsort()
+        elif strategy == "uncertainty_sampling":
+            uncertainty_sampling = 1 - label_probas.max(axis=1)
+            priorities = uncertainty_sampling.argsort()[::-1]
+        elif strategy == "random":
+            priorities = np.random.permutation(label_probas.shape[0])
 
     return priorities
 
@@ -125,7 +135,7 @@ def compute_active_learning_curve(
     X_validation,
     y_validation,
     percentage_samples=[1,2,5,10,15,30,50,75,100],
-    strategies = ["uncertainty_sampling", "entropy_sampling", 'margin_sampling']):
+    strategies = ["random","uncertainty_sampling", "entropy_sampling", 'margin_sampling']):
     '''
     Emulate active learning with annotators:
     for a given training, test and validation set, get the validation error by
@@ -139,28 +149,10 @@ def compute_active_learning_curve(
     baseline_high = accuracy_score(y_validation, clf_trained.predict(X_validation))
     print('\tBaseline on 100% of data {}'.format(baseline_high))
 
-    # run a random sampling procedure for training with increasing amounts of labels
-    random_priorities = np.random.permutation(X_tolabel.shape[0])
     learning_curves = []
-
-    for percentage in percentage_samples:
-        n_samples = int((percentage/100.) * X_tolabel.shape[0])
-        X_labelled = X_tolabel[random_priorities[:n_samples],:]
-        y_labelled = y_tolabel[random_priorities[:n_samples]]
-        clf_current = model_selection(X_labelled, y_labelled)
-        current_score = accuracy_score(y_validation, clf_current.predict(X_validation))
-        learning_curves.append(
-                {
-                'percentage_samples': percentage,
-                'strategy': 'random',
-                'score': current_score
-                }
-            )
-        print('\t(RANDOM) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(n_samples, percentage, current_score, np.round(100.0*(current_score - learning_curves[0]['score'])/(baseline_high-learning_curves[0]['score']))))
-
     for strategy in strategies:
         # initially use random priorities, as we don't have a trained model
-        priorities = random_priorities.tolist()
+        priorities = np.random.permutation(X_tolabel.shape[0]).tolist()
         N = X_tolabel.shape[0]
         all_indices = set(range(N))
         labelled = []
@@ -181,7 +173,7 @@ def compute_active_learning_curve(
                     'score': current_score
                     }
                 )
-            print('\t(ACTIVE {}) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(strategy, n_training_samples, percentage, current_score, np.round(100.0*(current_score - learning_curves[0]['score'])/(baseline_high-learning_curves[0]['score']))))
+            print('\t(Strategy {}) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(strategy, n_training_samples, percentage, current_score, np.round(100.0*(current_score - learning_curves[0]['score'])/(baseline_high-learning_curves[0]['score']))))
 
             if len(to_label) > 0:
                 # prioritize the not yet labeled data points
@@ -192,7 +184,71 @@ def compute_active_learning_curve(
 
     return pd.DataFrame(learning_curves)
 
+def compute_informed_active_learning_curve(
+    X_tolabel,
+    y_tolabel,
+    X_validation,
+    y_validation,
+    percentage_samples=[1,30,50,75,100],
+    strategies = ['random', 'margin_sampling', 'informed'],
+    include_labels = [-1,1]):
+    '''
+    Emulate active learning with annotators, but neglect some classes during sampling:
 
+    '''
+
+    def evaluate(y,yhat,included=[-1,0,1]):
+        true, predicted = zip(*[(t,p) for t,p in zip(y, yhat) if t in included])
+        return accuracy_score(true, predicted)
+
+    labels = np.unique(y_tolabel)
+    include = [idx for idx, label in enumerate(labels) if label in include_labels]
+    exclude = [idx for idx, label in enumerate(labels) if label not in include_labels]
+
+    print('Computing active learning curve:')
+    clf_trained = model_selection(X_tolabel, y_tolabel)
+    baseline_high = evaluate(y_validation, clf_trained.predict(X_validation))
+    print('\tBaseline on 100% of data {}'.format(baseline_high))
+
+    learning_curves = []
+
+    for strategy in strategies:
+        # initially use random priorities, as we don't have a trained model
+        priorities = np.random.permutation(X_tolabel.shape[0]).tolist()
+        N = X_tolabel.shape[0]
+        all_indices = set(range(N))
+        labelled = []
+        for percentage in percentage_samples:
+            n_training_samples = int((percentage/100.) * N) - len(labelled)
+            labelled += priorities[:n_training_samples]
+            X_labelled = X_tolabel[labelled,:]
+            y_labelled = y_tolabel[labelled]
+            clf_current = model_selection(X_labelled, y_labelled)
+
+            # get the not yet labeled data point indices
+            to_label = list(all_indices - set(labelled))
+            y_validation_predicted = clf_current.predict(X_validation)
+            current_score = evaluate(y_validation, y_validation_predicted)
+            learning_curves.append(
+                    {
+                    'percentage_samples': percentage,
+                    'strategy': strategy,
+                    'score': current_score,
+                    'confusion_matrix': confusion_matrix(y_validation, y_validation_predicted)
+                    }
+                )
+            print('\t(Stragety {}) Trained on {} samples ({}%) from test set - reached {} ({}%)'.format(strategy, n_training_samples, percentage, current_score, np.round(100.0*(current_score - learning_curves[0]['score'])/(baseline_high-learning_curves[0]['score']))))
+
+            if len(to_label) > 0:
+                # prioritize the not yet labeled data points
+                if strategy=='informed':
+                    priorities = prioritize_samples(clf_current.predict_proba(X_tolabel[to_label,:]), include=include)
+                else:
+                    priorities = prioritize_samples(clf_current.predict_proba(X_tolabel[to_label,:]), strategy)
+                # get indices in original data set for not yet labeled data
+                priorities = [to_label[idx] for idx in priorities]
+
+    return pd.DataFrame(learning_curves)
 
 def run_explanations_experiment(validation_percentage = 0.1, top=5):
     def rem_words(row):
@@ -228,6 +284,38 @@ def run_explanations_experiment(validation_percentage = 0.1, top=5):
     df['new_predictions'] = clf.predict(vect.transform(df.newtexts.tolist()))
 
     return df[['true','pred','new_predictions','rel_words_pos','rel_words_neg','texts','newtexts']]
+
+def run_experiment_informed(
+        validation_percentage = 0.1,
+        n_reps=100,
+        percentage_samples=[1,50,60,70,80,90,100],
+        output_filename="informed_active_learning_curves.csv"):
+    '''
+    Runs a multilabel classification experiment
+    '''
+    print("Loading data")
+    X_all, y_all = load_data(left_right = True)
+    print("Validation set size {}% (n={})".format(validation_percentage, int(len(y_all) * validation_percentage)))
+    label_pool_percentage = 1 - validation_percentage
+    print("Label pool {}% (n={})".format(label_pool_percentage,int(len(y_all) * label_pool_percentage)))
+    labels = np.unique(y_all)
+    results = {}
+
+    # compute active learning curves
+    learning_curves = []
+    for irep in range(n_reps):
+        print("Repetition {}/{}".format(irep,n_reps))
+        X_tolabel, X_validation, y_tolabel, y_validation = \
+            train_test_split(X_all, y_all, test_size=validation_percentage)
+        learning_curve = compute_informed_active_learning_curve(
+                X_tolabel, y_tolabel,
+                X_validation, y_validation,
+                percentage_samples=sp.unique(percentage_samples))
+        learning_curve['repetition'] = irep
+        learning_curves.append(learning_curve)
+
+    pd.concat(learning_curves).to_csv(output_filename)
+
 
 def run_experiment(
         validation_percentage = 0.1,
@@ -293,6 +381,39 @@ def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
     pylab.title('Active Sampling Strategy Comparison')
     pylab.xlim([19,101])
     pylab.ylim([0.39,0.54])
+    pylab.ylabel("Accuracy")
+    pylab.xlabel("Labeling budget (% of total training data)")
+    pylab.tight_layout()
+    pylab.savefig('../manuscript/images/active_learning_manifesto.pdf')
+
+def plot_informed_active_learning(fn="informed_active_learning_curves.csv"):
+    import seaborn, pylab, re
+    df = pd.read_csv(fn)
+    def get_cm(row):
+        return np.array([[int(y) for y in re.findall(r'\d+', x)] for x in row.split("\n")])
+
+    def get_acc_from_cm(cm):
+        cm_ex = cm[[0,2],:][:,[0,2]]
+        return np.diag(cm_ex).sum() / cm_ex.sum()
+
+    df['binary_acc'] = df.confusion_matrix.apply(get_cm).apply(get_acc_from_cm)
+
+    pylab.figure(figsize=(12,6))
+    seaborn.set(font_scale=2)
+    seaborn.set_style('whitegrid')
+    pylab.hold('all')
+    linestyles = zip(df.strategy.unique(),[':','-.','--','-'])
+    for strategy,linestyle in linestyles:
+        axes = seaborn.tsplot(
+            time="percentage_samples",
+            value="binary_acc",
+            condition="strategy",
+            unit="repetition",
+            err_style="ci_bars",
+            ci=[.05,95],
+            lw=2,
+            data=df[df.strategy==strategy], estimator=np.median, linestyle=linestyle, color='black')
+    pylab.title('Active Sampling Strategy Comparison')
     pylab.ylabel("Accuracy")
     pylab.xlabel("Labeling budget (% of total training data)")
     pylab.tight_layout()
