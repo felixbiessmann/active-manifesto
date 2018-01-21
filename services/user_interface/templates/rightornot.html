@@ -63,10 +63,7 @@
       // finished labelling round
       if(swipeCount >= maxSwipes) {
 
-        $("#political_samples_box").html(
-            " <h5> Dein Bias ist: " + map_left_right(error_direction) + "</h5>" +
-            `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% anders eingeordnet als das Manifesto Projekt.</p>"
-        ).height("auto");
+        $("#political_samples_box").remove();
 
         data = {
             'data': labeled_data
@@ -81,13 +78,16 @@
         if (news.length > 0) {
           var news_html = news.map(function(article){
                               return `<div class="row align-items-center">
-                              <div class=col align-self-center><a href=`
+                              <div class="col align-self-center p-2" style="background-color: rgba(0,0,0,0.12);"><a href=`
                                 + article.url + `>` + article.title  + `</a>`
                                 + "  ("+article.source+`)</div></div>` }).join(" ");
 
           $("#results_box").html(
-            `<div class=container><h5>Hier ein paar Nachrichten von ` + map_left_right(-error_direction) +`</h5>`
-            + news_html + `</div>`).height("auto")
+            `<div class="p-3"> <h5> Dein Bias ist: ` + map_left_right(error_direction) + "</h5>" +
+            `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% anders eingeordnet als das Manifesto Projekt.</p>" +
+            `<a href="javascript:window.location.reload(true)" class="btn btn-info" role="button">Nochmal</a>` +
+            `<div class="p-4"><h5>Hier ein paar Nachrichten von ` + map_left_right(-error_direction) +`</h5>`
+            + news_html + `</div></div>`).height("auto")
         }
         started = false;
         sessionSamples = []
@@ -98,8 +98,8 @@
         sessionSamples = get_samples();
 
       } else {
-        $("#political_samples_box").html(sessionSamples[swipeCount]['statement']).height(200);
-        $("#results_box").html(`Falsch: ` + (wrong / swipeCount).toPrecision(2) + " | Bias: " + error_direction + " (" + map_left_right(error_direction) + ")" ).height("auto")
+        $("#political_samples_box").html(`<div class="p-3">` + sessionSamples[swipeCount]['statement'] + `</div>`);
+        //$("#results_box").html(`Falsch: ` + (wrong / swipeCount).toPrecision(2) + " | Bias: " + error_direction + " (" + map_left_right(error_direction) + ")" ).height("auto")
       }
     }
 
@@ -243,8 +243,8 @@ rightornot trägt dazu bei durch:
     <div class="row justify-content-around align-items-center">
         <div class="col">
 
-            <div id="swipe" style="height: 80%; background-color: rgba(0,0,0,0.1);">
-                <div id="political_samples_box" class="text-center">
+            <div id="swipe" style="background-color: rgba(0,0,0,0.1);">
+                <div id="political_samples_box" class="text-center p-2">
                     <p>Wir zeigen einige Texte.
                     </p>
                     <p>
@@ -263,7 +263,7 @@ rightornot trägt dazu bei durch:
 
       <div class="row justify-content-around  align-items-center">
           <div class="col">
-            <div id="results_box" class="text-center" style="background-color: rgba(0,0,0,0.2);">
+            <div id="results_box" class="text-center" style="background-color: rgba(0,0,0,0.1);">
             </div>
         </div>
     </div>
