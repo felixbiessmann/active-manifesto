@@ -398,26 +398,49 @@ def plot_informed_active_learning(fn="informed_active_learning_curves.csv"):
 
     df['binary_acc'] = df.confusion_matrix.apply(get_cm).apply(get_acc_from_cm)
 
+
     pylab.figure(figsize=(12,6))
     seaborn.set(font_scale=2)
     seaborn.set_style('whitegrid')
-    pylab.hold('all')
-    linestyles = zip(df.strategy.unique(),[':','-.','--','-'])
-    for strategy,linestyle in linestyles:
-        axes = seaborn.tsplot(
-            time="percentage_samples",
-            value="binary_acc",
-            condition="strategy",
-            unit="repetition",
-            err_style="ci_bars",
-            ci=[.05,95],
-            lw=2,
-            data=df[df.strategy==strategy], estimator=np.median, linestyle=linestyle, color='black')
-    pylab.title('Active Sampling Strategy Comparison')
+
+    axes = seaborn.tsplot(
+        time="percentage_samples",
+        value="score",
+        condition="strategy",
+        unit="repetition",
+        err_style="ci_bars",
+        ci=[.05,95],
+        lw=2,
+        data=df, estimator=np.median)
+    pylab.xlim([49,101])
+    pylab.ylim([0.6,0.65])
+
+    pylab.title('Left vs Right vs Neutral')
     pylab.ylabel("Accuracy")
     pylab.xlabel("Labeling budget (% of total training data)")
     pylab.tight_layout()
-    pylab.savefig('../manuscript/images/active_learning_manifesto.pdf')
+    pylab.savefig('../manuscript/images/active_learning_manifesto_informed_three_class.pdf')
+
+    pylab.figure(figsize=(12,6))
+    seaborn.set(font_scale=2)
+    seaborn.set_style('whitegrid')
+
+    axes = seaborn.tsplot(
+        time="percentage_samples",
+        value="binary_acc",
+        condition="strategy",
+        unit="repetition",
+        err_style="ci_bars",
+        ci=[.05,95],
+        lw=2,
+        data=df, estimator=np.median)
+    pylab.xlim([49,101])
+    pylab.ylim([0.795,0.83])
+    pylab.title('Left vs. Right')
+    pylab.ylabel("Accuracy")
+    pylab.xlabel("Labeling budget (% of total training data)")
+    pylab.tight_layout()
+    pylab.savefig('../manuscript/images/active_learning_manifesto_informed_two_class.pdf')
 
 def plot_label_histogram(folder = "../data/manifesto"):
     manifesto_labels = pd.read_csv(os.path.join(folder,"manifestolabels.txt"),sep=" ",names=['cmp_code','label'])
