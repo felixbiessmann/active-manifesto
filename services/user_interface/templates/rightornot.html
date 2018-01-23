@@ -167,49 +167,36 @@
       },
       threshold:20
     });
+
+
   });
 
+
+
 function details(){
-  $("#results_box").remove()
-$("#political_samples_box").html(`<h3>
-  Details zum Projekt
-</h3>
-<a href="#data" class="btn btn-block" data-toggle="collapse">Daten</a>
-  <div  id="data" class="collapse">
-  <p>Die Daten um das Machine Learning Model zu trainieren sind vom <a href="https://manifesto-project.wzb.eu">Manifesto Projekt</a>, das sind Parteiprogramme, die von Politikwissenschaftlern annotiert wurden. Wir haben alle verfügbaren Daten von Parteien aus Deutschland genommen. </p>
-  </div>
-  <a href="#model" class="btn btn-block" data-toggle="collapse">Machine Learning Modell</a>
-    <div id="model" class="collapse">
-    <p> Wir haben ein Lineares Modell für die Vorhersage von Labels und das Active Learning Uncertainty Ranking benutzt. Details zum Active Learning sind beschrieben <a href="https://github.com/felixbiessmann/active-manifesto/raw/master/manuscript/active-manifesto.pdf">in diesem Manuskript</a>, Details zum Modell und der Merkmalsextraktion sind  <a href="https://arxiv.org/abs/1608.02195">in diesem Manuskript</a></p>
-    </div>
-    <a href="#code" class="btn btn-block" data-toggle="collapse">Code</a>
-      <div id="code" class="collapse">
-      <p> Der Code dieser Demo und der Experimente ist <a href="https://github.com/felixbiessmann/active-manifesto">auf github</a></p>
-      </div>
-</ul>`).height("auto")
+$("#political_samples_box").html(
+  `<h3>Details zum Projekt</h3>
+  <h5>Daten</h5>
+  <p>Die Daten um das Machine Learning Model zu trainieren sind vom <a href="https://manifesto-project.wzb.eu">Manifesto Projekt</a>; der Datensatz besteht aus Parteiprogrammen, die von Politikwissenschaftlern annotiert wurden. Wir haben alle verfügbaren Daten von Parteien aus Deutschland genommen. </p>
+  <h5>Machine Learning Modell</h5>
+  <p> Wir haben ein Lineares Modell für die Vorhersage von Labels und das Active Learning Uncertainty Ranking benutzt. Details zum Active Learning sind beschrieben <a href="https://github.com/felixbiessmann/active-manifesto/raw/master/manuscript/active-manifesto.pdf">in diesem Manuskript</a>, Details zum Modell und der Merkmalsextraktion sind  <a href="https://arxiv.org/abs/1608.02195">in diesem Manuskript</a></p>
+  <h5>Code</h5>
+  <p> Der Code dieser Demo und der Experimente ist <a href="https://github.com/felixbiessmann/active-manifesto">auf github</a></p>
+  `).height("auto")
 };
 
 function about(){
-$("#results_box").remove()
+
 $("#political_samples_box").html(`
+  <h3>Ziel des Projekts</h3>
 <p>
-Ziel des Projekts ist es, Bürgern zu helfen, politischen Bias zu erkennen und damit einen neutralen Blick auf Inhalte zu bewahren.
+ Wir wollen Bürgern zu helfen, politischen Bias zu erkennen um einen neutralen Blick auf Inhalte zu bewahren, und zwar durch:
 </p>
-
-<p>
-rightornot trägt dazu bei durch:
-</p>
-<a href="#bias" class="btn btn-block" data-toggle="collapse">Schätzung des Politische Biases</a>
-  <div id="bias" class="collapse">
-
+<h5>Schätzung des Politische Biases</h5>
 <p>Wie man politische Texte einordnet, kann helfen sich selbst einzuordnen: Wer alles für links hält, ist eher nicht links, und wer alles für rechts hält, ist wohl eher nicht rechts. Bei dem Quiz berechnen wir auf einigen Texten, wie stark und in welche Richtung (links/rechts) ein Nutzer von den Politikwissenschaftlern des Manifesto Projekts abweicht.</p>
-</div>
-
-<a href="#annotation" class="btn btn-block" data-toggle="collapse">Annotation von Politischen Texten</a>
-  <div id="annotation" class="collapse">
+<h5>Annotation von Politischen Texten</h5>
 <p> Einige der Texte sind noch nicht annotiert. Wir benutzen <a href="https://en.wikipedia.org/wiki/Active_learning_(machine_learning)">Active Learning</a> um schnell das beste Modell zu trainieren.</p>
 <p> Mit den so gewonnenen annotierten Daten können Machine Learning Modelle trainiert werden, die neue Inhalte automatisiert auf politischen Bias untersuchen können. Dies erlaubt eine Empfehlung von Inhalten entprechend des politischen Bias' von Nutzern, um sich gezielt nach anderen Meinungen zu informieren.</p>
-</div>
 `).height("auto")
 };
 
@@ -240,34 +227,31 @@ rightornot trägt dazu bei durch:
 <div class="jumbotron">
 <div class="container">
 
-    <div class="row justify-content-around align-items-center">
-        <div class="col">
-
-            <div id="swipe" style="background-color: rgba(0,0,0,0.1);">
-                <div id="political_samples_box" class="text-center p-2">
-                    <p>Wir zeigen einige Texte.
-                    </p>
-                    <p>
-                      Swipe, um sie politisch einzuordnen.
-                    </p>
-                    <ul>
-                        <li><b>links</b>: für links</li>
-                        <li><b>runter</b> für neutral</li>
-                        <li><b>rechts</b> für rechts</li>
-                    </ul>
-                    <p>Klicke um zu starten</p>
-                </div>
-            </div>
-            </div>
-            </div>
-
-      <div class="row justify-content-around  align-items-center">
+      <div class="row justify-content-around align-items-center">
           <div class="col">
-            <div id="results_box" class="text-center" style="background-color: rgba(0,0,0,0.1);">
+              <div id="swipe" style="background-color: rgba(0,0,0,0.1);">
+                <div id="political_samples_box" class="text-center p-2">
+                  <h3>Entkomme der Filterblase</h3>
+                  <p>Wir zeigen einige Texte. Swipe, um sie politisch einzuordnen.
+                    </p>
+                    <b>links</b> für links, <b>runter</b> für neutral und <b>rechts</b> für rechts.
+                    </p>
+                            <p>So kann Dein politischer Bias bestimmt werden und wir können Zeitungsartikel empfehlen, die ausserhalb Deiner Filterbubble liegen.
+                            </p>
+                            <p>Klicke hier um zu starten.
+                            </p>
+                  </div>
+              </div>
             </div>
         </div>
-    </div>
-
+          <div class="row justify-content-around  align-items-center">
+              <div class="col">
+                <div id="results_box" class="text-center" style="background-color: rgba(0,0,0,0.1);">
+                </div>
+            </div>
+          </div>
+            </div>
+            </div>
 </div>
 </div>
 </body>
