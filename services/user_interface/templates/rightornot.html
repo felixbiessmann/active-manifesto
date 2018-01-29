@@ -89,6 +89,13 @@
             `<div class="p-4"><h5>Hier ein paar Nachrichten von ` + map_left_right(-error_direction) +`</h5>`
             + news_html + `</div></div>`).height("auto")
         }
+        else {
+          $("#results_box").html(
+            `<div class="p-3"> <h5> Dein Bias ist: ` + map_left_right(error_direction) + "</h5>" +
+            `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% anders eingeordnet als das Manifesto Projekt.</p>" +
+            `<a href="javascript:window.location.reload(true)" class="btn btn-info" role="button">Nochmal</a>` 
+            + news_html + `</div></div>`).height("auto")
+        }
         started = false;
         sessionSamples = []
         swipeCount=0;
