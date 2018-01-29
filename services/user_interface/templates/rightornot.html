@@ -93,7 +93,7 @@
           $("#results_box").html(
             `<div class="p-3"> <h5> Dein Bias ist: ` + map_left_right(error_direction) + "</h5>" +
             `<p>Du hast ` + (100 * wrong / (maxSwipes / 2)).toPrecision(3) + "% anders eingeordnet als das Manifesto Projekt.</p>" +
-            `<a href="javascript:window.location.reload(true)" class="btn btn-info" role="button">Nochmal</a>` 
+            `<a href="javascript:window.location.reload(true)" class="btn btn-info" role="button">Nochmal</a>`
             + news_html + `</div></div>`).height("auto")
         }
         started = false;
@@ -231,11 +231,11 @@ $("#political_samples_box").html(`
     </ul>
   </div>
 </nav>
-<div class="jumbotron">
+<div class="jumbotron vertical-center" style="min-height: 100%;min-height: 100vh;display: flex;align-items: center;">
 <div class="container">
 
       <div class="row justify-content-around align-items-center">
-          <div class="col">
+          <div class="col align-self-center">
               <div id="swipe" style="background-color: rgba(0,0,0,0.1);">
                 <div id="political_samples_box" class="text-center p-2">
                   <h3>Entkomme der Filterblase</h3>
