@@ -71,52 +71,52 @@ class NewsReader(object):
 
         for source in self.sources:
 
-            url = None
+            try:
+                url = None
 
-            if source is 'nachrichtenleicht':
-                url = 'http://www.nachrichtenleicht.de/nachrichten.2005.de.html'
-                site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
-                titles = site.findAll("p", {"class": "dra-lsp-element-headline"})
-                urls = ['http://www.nachrichtenleicht.de/' + a.findNext('a')['href'] for a in titles]
+                if source is 'nachrichtenleicht':
+                    url = 'http://www.nachrichtenleicht.de/nachrichten.2005.de.html'
+                    site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
+                    titles = site.findAll("p", {"class": "dra-lsp-element-headline"})
+                    urls = ['http://www.nachrichtenleicht.de/' + a.findNext('a')['href'] for a in titles]
 
-            if source is 'spiegel':
-                # fetching articles from sueddeutsche.de/politik
-                url = 'http://www.spiegel.de/politik'
-                site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
-                titles = site.findAll("div", {"class": "teaser"})
-                urls = ['http://www.spiegel.de' + a.findNext('a')['href'] for a in titles]
+                if source is 'spiegel':
+                    # fetching articles from sueddeutsche.de/politik
+                    url = 'http://www.spiegel.de/politik'
+                    site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
+                    titles = site.findAll("div", {"class": "teaser"})
+                    urls = ['http://www.spiegel.de' + a.findNext('a')['href'] for a in titles]
 
-            if source is 'faz':
-                # fetching articles from sueddeutsche.de/politik
-                url = 'http://www.faz.net/aktuell/politik'
-                site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
-                titles = site.findAll("a", {"class": "tsr-Base_ContentLink"})
-                urls = ['http://www.faz.net' + a['href'] for a in titles if  a.has_attr('href')]
+                if source is 'faz':
+                    # fetching articles from sueddeutsche.de/politik
+                    url = 'http://www.faz.net/aktuell/politik'
+                    site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
+                    titles = site.findAll("a", {"class": "tsr-Base_ContentLink"})
+                    urls = ['http://www.faz.net' + a['href'] for a in titles if  a.has_attr('href')]
 
-            if source is 'welt':
-                # fetching articles from sueddeutsche.de/politik
-                url = 'http://www.welt.de/politik'
-                site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
-                titles = site.findAll("a", {"class": "o-link o-teaser__link "})
-                urls = ['http://www.welt.de' + a['href'] for a in titles]
+                if source is 'welt':
+                    # fetching articles from sueddeutsche.de/politik
+                    url = 'http://www.welt.de/politik'
+                    site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
+                    titles = site.findAll("a", {"class": "o-link o-teaser__link "})
+                    urls = ['http://www.welt.de' + a['href'] for a in titles]
 
-            if source is 'sz':
-                # fetching articles from sueddeutsche.de/politik
-                url = 'http://www.sueddeutsche.de/politik'
-                site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
-                titles = site.findAll("a", {"class": "entry-title"})
-                urls = [a['href'] for a in titles if  a.has_attr('href')]
+                if source is 'sz':
+                    # fetching articles from sueddeutsche.de/politik
+                    url = 'http://www.sueddeutsche.de/politik'
+                    site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
+                    titles = site.findAll("a", {"class": "entry-title"})
+                    urls = [a['href'] for a in titles if  a.has_attr('href')]
 
-            if source is 'zeit':
-                # fetching articles from zeit.de/politik
-                url = 'http://www.zeit.de/politik'
-                site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
-                urls = [a['href'] for a in site.findAll("a", {"class": "teaser-small__combined-link"})]
+                if source is 'zeit':
+                    # fetching articles from zeit.de/politik
+                    url = 'http://www.zeit.de/politik'
+                    site = BeautifulSoup(urllib.request.urlopen(url).read(), "lxml")
+                    urls = [a['href'] for a in site.findAll("a", {"class": "teaser-small__combined-link"})]
 
-            print("Found %d articles on %s" % (len(urls), url))
+                print("Found %d articles on %s" % (len(urls), url))
 
-            for url in urls:
-                try:
+                for url in urls:
                     title, text = NewsReader.fetch_url(url)
                     label = requests.post(url=MANIFESTO_URL,
                         json={'text': text}).json()['prediction']
@@ -127,17 +127,17 @@ class NewsReader(object):
                             'url': url,
                             'label': label
                             })
-                except:
-                    import traceback
-                    print('Could not get text from %s' % url)
-                    traceback.print_exc()
-                    pass
 
-            topic_assignments, topics = self.get_topics([x['title'] for x in articles], self.n_topics)
-            for article, topic_assignment in zip(articles,topic_assignments):
-                article['topic'] = int(topic_assignment)
+                topic_assignments, topics = self.get_topics([x['title'] for x in articles], self.n_topics)
 
-            # this is a quick fix for the case of no successful news crawl
-            if len(articles) > 10:
+
+                for article, topic_assignment in zip(articles,topic_assignments):
+                    article['topic'] = int(topic_assignment)
+
                 self.articles = articles
                 self.topics = topics
+
+            except:
+                import traceback
+                print('Could not get text from %s' % url)
+                traceback.print_exc()
