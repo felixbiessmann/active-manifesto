@@ -128,12 +128,16 @@ class NewsReader(object):
                             'label': label
                             })
                 except:
+                    import traceback
                     print('Could not get text from %s' % url)
+                    traceback.print_exc()
                     pass
 
             topic_assignments, topics = self.get_topics([x['title'] for x in articles], self.n_topics)
             for article, topic_assignment in zip(articles,topic_assignments):
                 article['topic'] = int(topic_assignment)
 
-            self.articles = articles
-            self.topics = topics
+            # this is a quick fix for the case of no successful news crawl
+            if len(articles) > 10:
+                self.articles = articles
+                self.topics = topics

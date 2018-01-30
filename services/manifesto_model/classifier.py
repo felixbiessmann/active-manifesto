@@ -110,7 +110,7 @@ class Classifier:
             parameters = {'clf__alpha': (10. ** sp.arange(-6, -4, 1.)).tolist()}
 
         # perform gridsearch to get the best regularizer
-        gs_clf = GridSearchCV(text_clf, parameters, n_jobs=-1, verbose=4)
+        gs_clf = GridSearchCV(text_clf, parameters, n_jobs=1, verbose=4)
         gs_clf.fit(data, labels)
         # dump classifier to pickle
         joblib.dump(gs_clf.best_estimator_, self.clf_path)

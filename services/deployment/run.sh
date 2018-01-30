@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-# sudo docker stop $(sudo docker ps -a -q)
-# sudo docker rm $(sudo docker ps -a -q)
+sudo docker stop $(sudo docker ps -a -q)
+sudo docker rm $(sudo docker ps -a -q)
 # #
 # sudo docker rmi services_user_interface -f
 # sudo docker rmi services_manifesto_model -f
 # sudo docker rmi news_crawler -f
 # sudo docker container prune
-# sudo docker-compose build
+sudo docker-compose build
 
 echo ""
 
