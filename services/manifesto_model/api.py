@@ -90,7 +90,7 @@ def texts_and_labels():
         ]
     }
     """
-    print(request.get_data(as_text=True))
+    #print(request.get_data(as_text=True))
     texts_with_labels = json.loads(request.get_data(as_text=True))['data']
     text_ids = map(lambda entry: entry['text_id'], texts_with_labels)
     labels = map(lambda entry: entry['label'], texts_with_labels)
@@ -162,7 +162,7 @@ def prioritized_texts_with_label():
 @app.route("/predict", methods=['POST'])
 def predict():
     req = json.loads(request.get_data(as_text=True))
-    print('model/predict parsed', req)
+    #print('model/predict parsed', req)
     text = req['text']
     result = classifier.predict([text])
     print('result', result)
