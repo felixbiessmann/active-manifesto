@@ -6,6 +6,7 @@ import time
 import numpy as np
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 from flask import Flask, request, jsonify
 from collections import defaultdict
 from sqlite_wrapper import get_texts_with_labels, insert_into, get_texts_only, get_texts_with_ids
@@ -66,7 +67,11 @@ def retrain():
     classifier.train(texts, labels)
 
 
-scheduler = BackgroundScheduler()
+executors = {
+    'default': ThreadPoolExecutor(1),
+    'processpool': ProcessPoolExecutor(1)
+}
+scheduler = BackgroundScheduler(executors=executors)
 scheduler.add_job(retrain, 'interval', minutes=60)
 scheduler.start()
 
@@ -85,7 +90,7 @@ def texts_and_labels():
         ]
     }
     """
-    print(request.get_data(as_text=True))
+    #print(request.get_data(as_text=True))
     texts_with_labels = json.loads(request.get_data(as_text=True))['data']
     text_ids = map(lambda entry: entry['text_id'], texts_with_labels)
     labels = map(lambda entry: entry['label'], texts_with_labels)
@@ -157,7 +162,7 @@ def prioritized_texts_with_label():
 @app.route("/predict", methods=['POST'])
 def predict():
     req = json.loads(request.get_data(as_text=True))
-    print('model/predict parsed', req)
+    #print('model/predict parsed', req)
     text = req['text']
     result = classifier.predict([text])
     print('result', result)
