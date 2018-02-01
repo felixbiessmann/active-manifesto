@@ -4,7 +4,7 @@ import pandas as pd
 
 BASEURL = "https://manifesto-project.wzb.eu/tools"
 VERSION = "MPDS2016b"
-APIKEY  = "" #AN API KEY STRING FROM https://manifestoproject.wzb.eu/information/documents/api
+APIKEY  = "9cd9104a725f26bcae04da3eed6bdd40" #AN API KEY STRING FROM https://manifestoproject.wzb.eu/information/documents/api
 COUNTRY = "Germany"
 DATADIR = "data/manifesto"
 

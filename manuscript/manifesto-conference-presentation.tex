@@ -69,9 +69,11 @@ Philipp Schmidt\thanks{schmidtiphil@gmail.com}
 
 \begin{frame}\frametitle{Disclaimers}
 \small
-\begin{itemize}[<+->]
-\item (For us) This is just a hobby / open source project
+\begin{itemize}
+\item (For us) This open source work is a hobby
 \item It has nothing to do with our job
+\item Apologies if we missed to cite somebody in this room
+\item We'd be excited to hear about more related work
 \end{itemize}
 \end{frame}
 
@@ -90,10 +92,10 @@ Philipp Schmidt\thanks{schmidtiphil@gmail.com}
 
 \begin{frame}\frametitle{Motivation}
 \begin{itemize}[<+->]
-\item Machine Learning models need fresh training data
+\item ML models need fresh training data \footnote{\cite{Biessmann16}}
 \item But annotation budget is often limited:
 \begin{itemize}
-\item Temporal constraints (before elections) \cite{merz2017}
+\item Temporal constraints (before elections) \footnote{\cite{merz2017}, \cite{bronline}}
 \item Online news media (too much content) 
 \end{itemize}
 \item[$\rightarrow$] How to select which texts to annotate?
@@ -102,7 +104,7 @@ Philipp Schmidt\thanks{schmidtiphil@gmail.com}
 
 \begin{frame}\frametitle{Active Learning}
 \begin{itemize}[<+->]
-\item Train best model with limited budget
+\item Given limited annotation budget, find the best model
 \item Annotate difficult ones\footnote{For which model is most uncertain.} first
 \item Why?
 \begin{itemize}
@@ -118,15 +120,18 @@ Philipp Schmidt\thanks{schmidtiphil@gmail.com}
 \subsection{}
 
 \begin{frame}\frametitle{Data}
+\footnotesize
 \begin{itemize}
-\item All annotated German texts from \url{https://manifestoproject.wzb.eu/} 
+\item All annotated German texts from:\\ 
+\url{https://manifestoproject.wzb.eu/} 
+\item Custom python tooling for manifesto API:\\
+ \url{https://github.com/felixbiessmann/active-manifesto} 
 \item Only texts with more than 1000 observed labels
 \end{itemize}
 \end{frame}
 
 \begin{frame}\frametitle{Preprocessing}
 \begin{itemize}
-\item Basic text cleaning (regexps, stopwords)
 \item Unigram Bag-of-Words features
 \item Hashing Vectorizer
 \end{itemize}
@@ -169,7 +174,7 @@ With
 \begin{itemize}
 \item Train model on 1\%, 10\%, 20\%, \dots, 100\% of training data
 \item Vary sampling strategies to select from unlabelled texts
-\item Evaluate agains 'perfect' model trained on all data
+\item Compute accuracy on hold-out data
 \end{itemize}
 \end{frame}
 
@@ -222,8 +227,8 @@ Median accuracy and the 5th/95th percentile across 100 repetitions \\
 \begin{frame}\frametitle{Conclusion}
 \begin{itemize}
 \item Political text analysis requires automation
-\item Automation requires annotations for training models
-\item Limited budged for annotations of political texts 
+\item Automation requires annotations
+\item \textbf{Limited budged} for annotations of political texts 
 \item Active Learning
 \begin{itemize}
 \item Helps to select which texts to annotate
@@ -231,8 +236,30 @@ Median accuracy and the 5th/95th percentile across 100 repetitions \\
 \item Almost perfect (over 95\%) with 50\% of data
 \end{itemize}
 \item[$\rightarrow$] Active learning can speed up political annotations. 
-\item Demo: \url{http://rightornot.info}
+\item Code:\\
+\footnotesize
+ \url{https://github.com/felixbiessmann/active-manifesto} 
 \end{itemize}
+\end{frame}
+
+
+
+\begin{frame}\frametitle{Demo \url{http://rightornot.info}}
+\begin{itemize}
+\item Goal: Collect Labels
+\item Incentive for users: 
+\begin{enumerate}
+\item Estimate your political bias
+\item Escape your political filter bubble
+\end{enumerate}
+\end{itemize}
+\centering
+\end{frame}
+
+
+\begin{frame}\frametitle{Demo \url{http://rightornot.info}}
+\centering 
+\includegraphics[width=.6\textwidth]{images/web-demo}\\
 \end{frame}
 
 \begin{frame}\frametitle{References}
