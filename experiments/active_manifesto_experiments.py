@@ -135,7 +135,7 @@ def compute_active_learning_curve(
     X_validation,
     y_validation,
     percentage_samples=[1,2,5,10,15,30,50,75,100],
-    strategies = ["random","uncertainty_sampling", "entropy_sampling", 'margin_sampling']):
+    strategies = ["random", 'margin_sampling']):
     '''
     Emulate active learning with annotators:
     for a given training, test and validation set, get the validation error by
@@ -326,7 +326,7 @@ def run_experiment(
     Runs a multilabel classification experiment
     '''
     print("Loading data")
-    X_all, y_all = load_data(left_right = False)
+    X_all, y_all = load_data(left_right = True)
     print("Validation set size {}% (n={})".format(validation_percentage, int(len(y_all) * validation_percentage)))
     label_pool_percentage = 1 - validation_percentage
     print("Label pool {}% (n={})".format(label_pool_percentage,int(len(y_all) * label_pool_percentage)))
@@ -377,10 +377,10 @@ def plot_results(fn=EXPERIMENT_RESULT_FILENAME):
             err_style="ci_bars",
             ci=[.05,95],
             lw=2,
-            data=df[df.strategy==strategy], estimator=np.median, linestyle=linestyle, color='black')
-    pylab.title('Active Sampling Strategy Comparison')
-    pylab.xlim([19,101])
-    pylab.ylim([0.39,0.54])
+            data=df[df.strategy==strategy], estimator=np.median, linestyle=linestyle)
+    pylab.title('Left vs. Neutral vs. Right')
+    pylab.xlim([10,101])
+    pylab.ylim([0.55,0.65])
     pylab.ylabel("Accuracy")
     pylab.xlabel("Labeling budget (% of total training data)")
     pylab.tight_layout()
