@@ -6,6 +6,7 @@ import time
 import numpy as np
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 from flask import Flask, request, jsonify
 from collections import defaultdict
 from sqlite_wrapper import get_texts_with_labels, insert_into, get_texts_only, get_texts_with_ids
@@ -66,7 +67,11 @@ def retrain():
     classifier.train(texts, labels)
 
 
-scheduler = BackgroundScheduler()
+executors = {
+    'default': ThreadPoolExecutor(1),
+    'processpool': ProcessPoolExecutor(1)
+}
+scheduler = BackgroundScheduler(executors=executors)
 scheduler.add_job(retrain, 'interval', minutes=60)
 scheduler.start()
 

@@ -10,6 +10,7 @@ from flask import redirect, render_template, request
 
 from newsreader import NewsReader
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 
 app = Flask(__name__)
 DEBUG=True
@@ -19,7 +20,11 @@ HTTP_PORT = int(os.environ.get('HTTP_PORT'))
 MANIFESTO_URL = 'http://manifesto_model:{}/predict'.format(MANIFESTO_MODEL_HTTP_PORT)
 
 reader = NewsReader()
-scheduler = BackgroundScheduler()
+executors = {
+    'default': ThreadPoolExecutor(1),
+    'processpool': ProcessPoolExecutor(1)
+}
+scheduler = BackgroundScheduler(executors=executors)
 scheduler.add_job(reader.fetch_news, 'interval', minutes=60)
 scheduler.start()
 
